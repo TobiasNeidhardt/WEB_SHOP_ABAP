@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_FUGR" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <AREAT>Funktionsgruppe Collect Articles</AREAT>
+   <INCLUDES>
+    <SOBJ_NAME>LZ_COLLECT_ARTICLESTOP</SOBJ_NAME>
+    <SOBJ_NAME>SAPLZ_COLLECT_ARTICLES</SOBJ_NAME>
+   </INCLUDES>
+   <FUNCTIONS>
+    <item>
+     <FUNCNAME>ZWEB_ADD_ARTICLE</FUNCNAME>
+     <SHORT_TEXT>Fügt Artikel zur Datenbanktabelle hinzu</SHORT_TEXT>
+     <IMPORT>
+      <RSIMP>
+       <PARAMETER>IS_ARTICLE</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>ZWEB_ARTICLE</TYP>
+      </RSIMP>
+     </IMPORT>
+     <DOCUMENTATION>
+      <RSFDO>
+       <PARAMETER>IS_ARTICLE</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Artikeldaten für Web-Shop</STEXT>
+      </RSFDO>
+     </DOCUMENTATION>
+    </item>
+    <item>
+     <FUNCNAME>ZWEB_SHOW_ARTICLE_LIST</FUNCNAME>
+     <SHORT_TEXT>Zeigt alle Artikeleinträge</SHORT_TEXT>
+    </item>
+   </FUNCTIONS>
+  </asx:values>
+ </asx:abap>
+</abapGit>
