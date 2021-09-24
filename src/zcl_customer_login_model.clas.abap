@@ -5,11 +5,12 @@ CLASS zcl_customer_login_model DEFINITION
 
   PUBLIC SECTION.
 
-    METHODS: check_if_password_is_correct
-      IMPORTING
-                !iv_password TYPE zweb_password
-                !iv_email    TYPE zweb_email
-      RAISING   zcx_webshop_exception_new,
+    METHODS:
+      check_if_password_is_correct
+        IMPORTING
+                  !iv_password TYPE zweb_password
+                  !iv_email    TYPE zweb_email
+        RAISING   zcx_webshop_exception_new,
       save_registration_customer
         IMPORTING
                   !is_register_data TYPE zweb_s_register
@@ -20,7 +21,8 @@ CLASS zcl_customer_login_model DEFINITION
         RAISING   zcx_webshop_exception_new,
       constructor
         IMPORTING
-          !io_controller TYPE REF TO zcl_customer_login_controller,
+          !io_controller TYPE REF TO zcl_customer_login_controller
+          !io_log        TYPE REF TO zcl_webshop_log,
       get_customer_number
         IMPORTING
                   !iv_email                TYPE zweb_email
@@ -54,6 +56,8 @@ CLASS zcl_customer_login_model IMPLEMENTATION.
 
     IF sy-subrc <> 4 OR ls_customer IS NOT INITIAL.
       MESSAGE i088(z_web_shop) INTO DATA(ls_msg).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
 
@@ -70,6 +74,8 @@ CLASS zcl_customer_login_model IMPLEMENTATION.
     IF sy-subrc <> 0.
       "no account could be found => Error Message
       MESSAGE i039(z_web_shop) INTO DATA(ls_msg).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
 
@@ -87,6 +93,7 @@ CLASS zcl_customer_login_model IMPLEMENTATION.
   METHOD constructor.
 
     me->mo_controller = io_controller.
+    me->mo_log = io_log.
 
   ENDMETHOD.
 
@@ -100,6 +107,8 @@ CLASS zcl_customer_login_model IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       MESSAGE i044(z_web_shop) INTO DATA(ls_msg).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
 

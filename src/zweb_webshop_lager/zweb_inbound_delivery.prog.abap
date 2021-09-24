@@ -18,7 +18,7 @@ TRY.
   CATCH zcx_webshop_exception_NEW INTO DATA(lo_exc).
 
     "logg messages and display in a popup
-    lo_log->add_msg( is_message = lo_exc->get_message( ) ).
+*    lo_log->add_msg( is_message = lo_exc->get_message( ) ).
     lo_log->safe_log( ).
     lo_log->display_log_as_popup( ).
 

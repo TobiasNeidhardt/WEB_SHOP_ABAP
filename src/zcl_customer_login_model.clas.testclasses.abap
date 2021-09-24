@@ -7,7 +7,8 @@ CLASS ltc_customer_model DEFINITION FOR TESTING RISK LEVEL HARMLESS.
     DATA: m_cut               TYPE REF TO zcl_customer_login_model,
           lt_adress_data      TYPE TABLE OF zweb_customer,
           l_exception_occured TYPE abap_bool,
-          login_controller    TYPE REF TO zcl_customer_login_controller.
+          login_controller    TYPE REF TO zcl_customer_login_controller,
+          mo_log        TYPE REF TO zcl_webshop_log.
 
     CONSTANTS: lc_customer_number_1 TYPE zweb_customer_number VALUE '1',
                lc_customer_number_2 TYPE zweb_customer_number VALUE '2',
@@ -28,7 +29,8 @@ CLASS ltc_customer_model DEFINITION FOR TESTING RISK LEVEL HARMLESS.
       check_passwort_no_account_exc FOR TESTING,
       check_passwort_false FOR TESTING,
       check_get_customer_number FOR TESTING,
-      get_customer_number_exc_exist FOR TESTING.
+      get_customer_number_exc_exist FOR TESTING,
+      check_pw_and_account_pass FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 CLASS ltc_customer_model IMPLEMENTATION.
@@ -37,11 +39,12 @@ CLASS ltc_customer_model IMPLEMENTATION.
     lt_adress_data = VALUE #( ( customer_number = lc_customer_number_1 name = lc_name_1 email = lc_mail_1 password = lc_password_1 )
                               ( customer_number = lc_customer_number_2 name = lc_name_2 email = lc_mail_2 password = lc_password_2 ) ).
 
-    login_controller = NEW zcl_customer_login_controller(  ).
+    mo_log = new zcl_webshop_log( iv_object = 'ZWEB' iv_suobj = 'ZWEB' ).
+    login_controller = NEW zcl_customer_login_controller( io_log =  mo_log ).
 
     m_environment->clear_doubles( ).
 
-    m_cut = NEW zcl_customer_login_model( login_controller ).
+    m_cut = NEW zcl_customer_login_model( io_controller = login_controller io_log = mo_log ).
     m_environment->insert_test_data( EXPORTING i_data = lt_adress_data ).
     l_exception_occured = abap_false.
 
@@ -65,12 +68,12 @@ CLASS ltc_customer_model IMPLEMENTATION.
     "then
     cl_abap_unit_assert=>assert_false(
       act = l_exception_occured
-      msg = 'Die Methode check_if_email_is_avaible funktioniert noch nicht richtig. Email noch nicht vorhanden deswegen darf sie verwendet werden!'
+      msg = 'Email noch nicht vorhanden deswegen darf sie verwendet werden!'
     ).
   ENDMETHOD.
 
   METHOD check_email_is_available_false.
-  "given
+    "given
     DATA: lv_mail TYPE zweb_email VALUE 'test@test.de'.
     TRY.
         "when
@@ -82,7 +85,7 @@ CLASS ltc_customer_model IMPLEMENTATION.
     "then
     cl_abap_unit_assert=>assert_true(
       act = l_exception_occured
-      msg = 'Die Methode check_if_email_is_avaible funktioniert noch nicht richtig. Die Email ist schon vorhanden und darf nicht noch einmal verwendet werden!'
+      msg = 'Es wird keine Exception geworfen'
     ).
 
   ENDMETHOD.
@@ -124,6 +127,27 @@ CLASS ltc_customer_model IMPLEMENTATION.
     ).
   ENDMETHOD.
 
+
+  METHOD check_pw_and_account_pass.
+
+    "given
+    DATA: lv_password TYPE zweb_password VALUE lc_password_1,
+          lv_mail     TYPE zweb_email VALUE lc_mail_1.
+
+    TRY.
+        m_cut->check_if_password_is_correct( iv_email = lv_mail iv_password = lv_password ).
+      CATCH zcx_webshop_exception_new INTO DATA(e_text).
+        l_exception_occured = abap_true.
+    ENDTRY.
+
+    "then
+    cl_abap_unit_assert=>assert_false(
+      act = l_exception_occured
+      msg = 'Es wird eine Exception geworfen obwohl Passwort und Email übereinstimmen'
+    ).
+
+  ENDMETHOD.
+
   METHOD check_get_customer_number.
     "given
     DATA: lv_customer_number TYPE zweb_customer_number,
@@ -136,7 +160,7 @@ CLASS ltc_customer_model IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( EXPORTING act =  lv_customer_number
                                                        exp =  lc_customer_number_1 ).
       CATCH zcx_webshop_exception_new.
-        cl_abap_unit_assert=>fail( EXPORTING msg = 'Die Methode get_customer_number funktioniert nicht richtig!' ).
+        cl_abap_unit_assert=>fail( EXPORTING msg = 'Es wird eine Exception geworfen!' ).
     ENDTRY.
 
   ENDMETHOD.

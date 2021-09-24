@@ -5,7 +5,11 @@ CLASS zcl_customer_login_controller DEFINITION
 
   PUBLIC SECTION.
 
-    METHODS: on_back ,
+    METHODS:
+      constructor
+      IMPORTING
+      !io_log TYPE REF TO zcl_webshop_log,
+      on_back ,
       on_confirm_login
         IMPORTING
                   !iv_email    TYPE zweb_email
@@ -39,6 +43,9 @@ ENDCLASS.
 
 CLASS zcl_customer_login_controller IMPLEMENTATION.
 
+  METHOD constructor.
+    me->mo_log = io_log.
+  ENDMETHOD.
 
   METHOD encrypt_password.
     TRY.
@@ -74,7 +81,8 @@ CLASS zcl_customer_login_controller IMPLEMENTATION.
 
         me->mo_home_screen_controller = NEW zcl_homescreen_controller( io_login_controller = me
                                                                             iv_customer_number  = me->mo_customer_login_model->get_customer_number( iv_email = iv_email )
-                                                                            iv_email = iv_email ).
+                                                                            iv_email = iv_email
+                                                                            io_log = mo_log ).
       CATCH zcx_webshop_exception_new INTO DATA(e_text).
         MESSAGE e_text->get_text( ) TYPE 'S' DISPLAY LIKE 'E'.
     ENDTRY.
@@ -174,7 +182,7 @@ CLASS zcl_customer_login_controller IMPLEMENTATION.
     ENDIF.
 
     IF me->mo_customer_login_model IS NOT BOUND.
-      mo_customer_login_model = NEW zcl_customer_login_model( io_controller = me ).
+      mo_customer_login_model = NEW zcl_customer_login_model( io_controller = me io_log = mo_log ).
     ENDIF.
     TRY.
         "Call the login screen

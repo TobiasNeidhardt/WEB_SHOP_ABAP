@@ -5,18 +5,17 @@
 *&---------------------------------------------------------------------*
 REPORT z_create_order.
 
-
-PARAMETERS: p_artnum  TYPE zweb_article_number MATCHCODE OBJECT zweb_sh_article OBLIGATORY,
-            p_kundid  TYPE zweb_kd_numr_de MATCHCODE OBJECT zweb_sh_customer OBLIGATORY,
+PARAMETERS: p_artnum TYPE zweb_article_number MATCHCODE OBJECT zweb_sh_article OBLIGATORY,
+            p_kundid TYPE zweb_kd_numr_de MATCHCODE OBJECT zweb_sh_customer OBLIGATORY,
             p_amount TYPE zweb_order_amount  OBLIGATORY,
-            p_bmeins  TYPE zweb_unit  OBLIGATORY.
+            p_bmeins TYPE zweb_unit  OBLIGATORY.
 
-CONSTANTS: lc_range_nr       TYPE  nrnr VALUE '01',
+CONSTANTS: lc_range_nr       TYPE  nrnr  VALUE '01',
            lc_status_ordered TYPE string VALUE 'BESTELLT',
            lc_status_cart    TYPE string VALUE 'Im Warenkorb'.
 
 DATA: lo_alv          TYPE REF TO   cl_salv_table
-      ,ls_order  TYPE          zweb_order
+      ,ls_order       TYPE          zweb_order
       ,lv_bnumber_int TYPE          i
       ,lv_bnumber_chr TYPE          zweb_order_number
       ,lt_cart   TYPE TABLE OF zweb_order
@@ -32,9 +31,9 @@ SELECTION-SCREEN END OF LINE.
 FIELD-SYMBOLS <fs_cart> TYPE zweb_order.
 
 SELECTION-SCREEN:
-PUSHBUTTON /2(20) button1 USER-COMMAND but1 , "Zum Warenkorb hinzufügen"
-PUSHBUTTON /2(20) button2 USER-COMMAND but2, "Bestellung aufgeben"
-PUSHBUTTON /2(20) button3 USER-COMMAND but3. "Bestellung aufgeben"
+PUSHBUTTON /2(20) button1 USER-COMMAND add_to_cart , "Zum Warenkorb hinzufügen"
+PUSHBUTTON /2(20) button2 USER-COMMAND order, "Bestellung aufgeben"
+PUSHBUTTON /2(20) button3 USER-COMMAND show. "Bestellung anzeigen"
 
 
 INITIALIZATION.
@@ -45,7 +44,7 @@ INITIALIZATION.
 AT SELECTION-SCREEN.
 
   CASE sy-ucomm.
-    WHEN 'BUT1'.
+    WHEN 'add_to_cart'.
       CLEAR ls_order.
 
       ls_order-unit = p_bmeins.
@@ -65,14 +64,14 @@ AT SELECTION-SCREEN.
         MESSAGE e012(z_web_shop).
       ENDIF.
 
-    WHEN 'BUT2'.
+    WHEN 'order'.
       IF lt_cart IS INITIAL.
         MESSAGE e011(z_web_shop).
       ELSE.
         CALL FUNCTION 'NUMBER_GET_NEXT'
           EXPORTING
             nr_range_nr = lc_range_nr
-            object      = 'ZSBT_BEST'
+            object      = 'ZWEB_ORDER'
           IMPORTING
             number      = lv_bnumber_int
           EXCEPTIONS
@@ -107,19 +106,17 @@ AT SELECTION-SCREEN.
 
         CLEAR:  lt_cart.
       ENDIF.
-    WHEN 'BUT3'.
+    WHEN 'show'.
       cl_salv_table=>factory(
       IMPORTING
         r_salv_table   = lo_alv
       CHANGING
         t_table        = lt_cart ).
 
-
       DATA(lo_functions) = lo_alv->get_functions( ).
       lo_functions->set_all( abap_false ).
       lo_columns = lo_alv->get_columns( ).
       lo_columns->set_optimize( abap_true ).
-
 
       TRY.
           lo_column  = lo_columns->get_column( columnname = 'MANDT'  ).
@@ -128,7 +125,6 @@ AT SELECTION-SCREEN.
           lo_column->set_visible( abap_false ).
           lo_column  = lo_columns->get_column( columnname = 'POSITIONSNUMMER'  ).
           lo_column->set_visible( abap_false ).
-
 
         CATCH cx_salv_not_found.
       ENDTRY.

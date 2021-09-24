@@ -15,8 +15,8 @@
                 lc_position_number_2 TYPE zweb_position_number VALUE '2',
                 lc_order_amount_1    TYPE zweb_order_amount VALUE 01,
                 lc_order_amount_2    TYPE zweb_order_amount VALUE 02,
-                lc_status_1          TYPE zweb_status VALUE 'BE',
-                lc_order_value_100   TYPE zweb_order_value VALUE '100',
+                mc_status_1          TYPE zweb_status VALUE 'BE',
+                mc_order_value_100   TYPE zweb_order_value VALUE '100',
                 mc_text_expception   TYPE string VALUE 'Es wurde eine Exception in der aufgerufnen Methode ausgelöst' ##NO_TEXT.
 
      DATA: m_cut               TYPE REF TO zcl_order_overview_model,
@@ -67,8 +67,9 @@
  CLASS ltc_web_shop_model IMPLEMENTATION.
 
    METHOD setup.
+
      "given
-     lt_order_data = VALUE #( ( order_number = lc_order_number position_number = lc_position_number_1 order_amount = lc_order_amount_1 status = lc_status_1 customer_number = lc_customer_number )
+     lt_order_data = VALUE #( ( order_number = lc_order_number position_number = lc_position_number_1 order_amount = lc_order_amount_1 status = mc_status_1 customer_number = lc_customer_number )
                               ( order_number = lc_order_number position_number = lc_position_number_2 order_amount = lc_order_amount_1 ) ).
 
      m_environment->clear_doubles( ).
@@ -198,7 +199,7 @@
            ls_position TYPE  zweb_order.
      "when
      TRY.
-         m_cut->get_data_type( EXPORTING iv_wert =  lv_value CHANGING  cs_position    =  ls_position ).
+         m_cut->change_structur_from_value( EXPORTING iv_wert =  lv_value CHANGING  cs_position    =  ls_position ).
          "then
        CATCH zcx_webshop_exception_new.
          cl_abap_unit_assert=>fail( EXPORTING msg = mc_text_expception ).
@@ -211,19 +212,19 @@
    METHOD get_datatyp_status.
 
      "given
-     DATA: lv_value    TYPE  zweb_status VALUE lc_status_1,
+     DATA: lv_value    TYPE  zweb_status VALUE mc_status_1,
            ls_position TYPE  zweb_order.
 
      "when
      TRY.
-         m_cut->get_data_type( EXPORTING iv_wert        =  lv_value
+         m_cut->change_structur_from_value( EXPORTING iv_wert        =  lv_value
                                CHANGING  cs_position    =  ls_position ).
          "then
        CATCH zcx_webshop_exception_new.
          cl_abap_unit_assert=>fail( EXPORTING msg = mc_text_expception ).
      ENDTRY.
      cl_abap_unit_assert=>assert_equals( EXPORTING act =  ls_position-status
-                                                   exp =  lc_status_1 ).
+                                                   exp =  mc_status_1 ).
 
    ENDMETHOD.
 
@@ -231,11 +232,11 @@
 
      "given
      "lv_value enthält einen datentyp der nicht in ls_position vorhanden ist get_data_type würde so dumpen
-     DATA: lv_value    TYPE  zweb_order_value VALUE lc_order_value_100,
+     DATA: lv_value    TYPE  zweb_order_value VALUE mc_order_value_100,
            ls_position TYPE  zweb_order.
      "when
      TRY.
-         m_cut->get_data_type( EXPORTING iv_wert        =  lv_value
+         m_cut->change_structur_from_value( EXPORTING iv_wert        =  lv_value
                                CHANGING  cs_position    =  ls_position ).
        CATCH zcx_webshop_exception_new.
          l_exception_occured = abap_true.
@@ -362,7 +363,7 @@
      DATA: mt_orders TYPE STANDARD TABLE OF zweb_order WITH DEFAULT KEY .
      "when
      TRY.
-         m_cut->select_with_condition( iv_condition = lc_status_1 iv_condition_description = m_cut->lc_status ).
+         m_cut->select_with_condition( iv_condition = mc_status_1 iv_condition_description = m_cut->lc_status ).
          mt_orders = m_cut->mt_orders.
          "then
        CATCH zcx_webshop_exception_new.
@@ -372,10 +373,11 @@
          cl_abap_unit_assert=>assert_equals( EXPORTING act =  mt_orders[ 1 ]-order_number
                                                        exp =  lc_order_number ).
          cl_abap_unit_assert=>assert_equals( EXPORTING act =  mt_orders[ 1 ]-status
-                                                       exp =  lc_status_1 ).
+                                                       exp =  mc_status_1 ).
        CATCH cx_sy_itab_line_not_found .
          cl_abap_unit_assert=>fail( EXPORTING msg = 'Es wurden keine Daten nach Status ausgelesen' ).
      ENDTRY.
+
    ENDMETHOD.
 
    METHOD select_by_customer_id.
@@ -447,7 +449,7 @@
 
      TRY.
          "when
-         m_cut->select_with_condition( iv_condition = lc_status_1 iv_condition_description = m_cut->lc_status ).
+         m_cut->select_with_condition( iv_condition = mc_status_1 iv_condition_description = m_cut->lc_status ).
          mt_orders = m_cut->mt_orders.
        CATCH zcx_webshop_exception_new.
          l_exception_occured = abap_true.
@@ -493,6 +495,7 @@
  CLASS ltc_web_shop_model_artikel IMPLEMENTATION.
 
    METHOD setup.
+
      "given
      lt_order_data = VALUE #( ( article_number = lc_article_number_1 price = lc_price_1 )
                               ( article_number = lc_article_number_2 price = lc_price_2 ) ).

@@ -10,7 +10,8 @@ CLASS zcl_homescreen_controller DEFINITION
     CONSTANTS lc_max_number_of_product TYPE i VALUE 50 ##NO_TEXT.
     DATA: mo_login_cntrl      TYPE REF TO zcl_customer_login_controller,
           mo_home_screen_view TYPE REF TO zcl_homescreen_view,
-          mt_order_to_show    TYPE zweb_tt_order.
+          mt_order_to_show    TYPE zweb_tt_order,
+          mo_log              TYPE REF TO zcl_webshop_log.
 
     METHODS: add_buttons_show_position
         FOR EVENT toolbar OF cl_gui_alv_grid
@@ -54,7 +55,8 @@ CLASS zcl_homescreen_controller DEFINITION
         IMPORTING
           !io_login_controller TYPE REF TO zcl_customer_login_controller
           !iv_customer_number  TYPE zweb_customer_number
-          !iv_email            TYPE zweb_email.
+          !iv_email            TYPE zweb_email
+          !io_log              TYPE REF TO zcl_webshop_log.
   PROTECTED SECTION.
   PRIVATE SECTION.
 
@@ -67,9 +69,9 @@ CLASS zcl_homescreen_controller DEFINITION
         open_orders   TYPE tv_nodekey VALUE 'open_orders',
         closed_orders TYPE tv_nodekey VALUE 'done_orders',
       END OF lcs_nodekey ,
-      lc_open        TYPE tv_nodekey VALUE 'Offen' ##NO_TEXT,
-      lc_orders_text TYPE c LENGTH 12 VALUE 'Bestellungen' ##NO_TEXT,
-      lc_done        TYPE tv_nodekey VALUE 'Erledigt' ##NO_TEXT.
+      mc_open        TYPE tv_nodekey VALUE 'Offen' ##NO_TEXT,
+      mc_orders_text TYPE c LENGTH 12 VALUE 'Bestellungen' ##NO_TEXT,
+      mc_done        TYPE tv_nodekey VALUE 'Erledigt' ##NO_TEXT.
 
     DATA:
       mo_home_screen_model          TYPE REF TO zcl_homescreen_model,
@@ -256,7 +258,7 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
                                             class       = cl_gui_list_tree=>item_class_text
                                             alignment   = cl_gui_list_tree=>align_auto
                                             font        = cl_gui_list_tree=>item_font_prop
-                                            text        = lc_orders_text ) ).
+                                            text        = mc_orders_text ) ).
 
     "node and item open orders
     et_node = VALUE #( BASE et_node ( node_key    = lcs_nodekey-open_orders
@@ -270,7 +272,7 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
                                             class       = cl_gui_list_tree=>item_class_text
                                             alignment   = cl_gui_list_tree=>align_auto
                                             font        = cl_gui_list_tree=>item_font_prop
-                                            text        = lc_open ) ).
+                                            text        = mc_open ) ).
 
     "node and item closed orders
     et_node = VALUE #( BASE et_node ( node_key  = lcs_nodekey-closed_orders
@@ -284,7 +286,7 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
                                             class     = cl_gui_list_tree=>item_class_text
                                             alignment = cl_gui_list_tree=>align_auto
                                             font      = cl_gui_list_tree=>item_font_prop
-                                            text      = lc_done ) ).
+                                            text      = mc_done ) ).
 
     "Show Open orders
     LOOP AT me->mo_home_screen_model->get_open_order_from_mt_order( ) ASSIGNING FIELD-SYMBOL(<ls_open_order>).
@@ -335,7 +337,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
     IF me->mo_home_screen_model IS NOT BOUND.
       me->mo_home_screen_model = NEW #( io_home_screen_controller =  me
-                                        iv_customer_number        = iv_customer_number ).
+                                        iv_customer_number        = iv_customer_number
+                                        io_log = mo_log ).
     ENDIF.
 
     me->mo_home_screen_model->set_customer_email( iv_email = iv_email ).
@@ -366,6 +369,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
         IF sy-subrc <> 0.
           MESSAGE i052(z_web_shop) WITH sy-subrc INTO DATA(ls_msg).
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
 
@@ -407,6 +412,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
           IF sy-subrc <> 0.
             MESSAGE i053(z_web_shop) WITH sy-subrc INTO DATA(ls_msg).
+            me->mo_log->add_msg_from_sys( ).
+            me->mo_log->safe_log( ).
             RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
           ENDIF.
 
@@ -497,6 +504,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
                                          OTHERS            = 4  ).
     IF sy-subrc <> 0.
       MESSAGE i062(z_web_shop) WITH sy-subrc.
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
     ENDIF.
 
 
@@ -510,6 +519,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
         IF lt_index_row IS INITIAL.
           MESSAGE i067(z_web_shop) INTO DATA(lv_msg).
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
         "It's only possible to mark one row, so in lt_sel_rows there would be only one line
@@ -520,6 +531,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
         IF lv_quantity IS INITIAL OR lv_quantity <= 0.
           MESSAGE i066(z_web_shop) INTO lv_msg.
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
 
@@ -640,10 +653,14 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
                                                            is_article            = ls_item ).
         ELSEIF lv_quantity <= 0.
           MESSAGE i048(z_web_shop) INTO DATA(ls_msg).
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
 
         ELSEIF lv_quantity >= lc_max_number_of_product.
           MESSAGE i049(z_web_shop) INTO ls_msg.
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
 
@@ -678,6 +695,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
     IF lv_btn = 1.
       MESSAGE i056(z_web_shop).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       FREE mo_login_cntrl.
       "start user login
       SUBMIT z_customer_portal.
@@ -805,9 +824,13 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
         ELSEIF lv_quantity <= 0.
           MESSAGE: i048(z_web_shop) INTO DATA(ls_msg).
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ELSEIF lv_quantity > lc_max_number_of_product.
           MESSAGE i049(z_web_shop) INTO ls_msg.
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
 
@@ -941,12 +964,16 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
         me->mo_home_screen_model->remove_item_from_cart( iv_article_number = me->search_selected_item_in_cart( )-article_number ).
         IF me->mo_home_screen_model->mt_cart IS INITIAL.
           MESSAGE i051(z_web_shop) INTO DATA(ls_msg).
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
 
         me->mo_alv_grid_cart->refresh_table_display( ).
         IF sy-subrc <> 0.
           MESSAGE i047(z_web_shop) INTO ls_msg.
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new.
         ENDIF.
 
@@ -1040,6 +1067,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
         IF it_sel_row IS INITIAL.
           MESSAGE i054(z_web_shop).
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
 
@@ -1047,6 +1076,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
         IF sy-subrc <> 0.
           MESSAGE i044(z_web_shop) INTO DATA(ls_msg).
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
 
@@ -1068,6 +1099,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
         IF it_sel_rows IS INITIAL.
           MESSAGE i057(z_web_shop).
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
         "in the alv it's not possible to select more than 1 row, so in our table it_sel_rows we don't have more than one row
@@ -1075,6 +1108,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
         IF ls_product IS INITIAL.
           MESSAGE i043(z_web_shop) INTO DATA(ls_msg).
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
 
@@ -1182,6 +1217,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
             OTHERS                = 4.
         IF sy-subrc <> 0.
           MESSAGE: i063(z_web_shop) WITH sy-subrc INTO DATA(ls_msg).
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
 
@@ -1190,6 +1227,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
                                                                            OTHERS = 2 ).
         IF sy-subrc <> 0.
           MESSAGE: i064(z_web_shop) WITH sy-subrc INTO ls_msg.
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
 
@@ -1198,6 +1237,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
                                                                OTHERS       = 2 ).
         IF sy-subrc <> 0.
           MESSAGE: i065(z_web_shop) WITH sy-subrc INTO ls_msg.
+          me->mo_log->add_msg_from_sys( ).
+          me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
         ENDIF.
 
@@ -1234,6 +1275,8 @@ CLASS zcl_homescreen_controller IMPLEMENTATION.
 
     ELSE.
       MESSAGE i068(z_web_shop) INTO  DATA(lv_msg).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
 

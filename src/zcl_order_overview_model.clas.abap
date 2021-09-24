@@ -41,7 +41,7 @@
       DATA: mt_orders    TYPE t_table,
             mt_positions TYPE t_table,
             mo_log       TYPE REF TO zcl_webshop_log.
-      METHODS: get_data_type IMPORTING iv_wert     TYPE any
+      METHODS: change_structur_from_value IMPORTING iv_wert     TYPE any
                              CHANGING  cs_position TYPE zweb_order
                              RAISING   zcx_webshop_exception_new,
         add_to_view   IMPORTING is_order       TYPE zweb_order
@@ -106,7 +106,7 @@ CLASS ZCL_ORDER_OVERVIEW_MODEL IMPLEMENTATION.
       FIELD-SYMBOLS <ls_position> TYPE zweb_order.
 
       ASSIGN ls_position TO <ls_position>.
-      me->get_data_type( EXPORTING iv_wert = iv_wert CHANGING cs_position = <ls_position> ).
+      me->change_structur_from_value( EXPORTING iv_wert = iv_wert CHANGING cs_position = <ls_position> ).
       UPDATE zweb_order FROM ls_position.
 
       IF sy-subrc NE 0.
@@ -137,7 +137,7 @@ CLASS ZCL_ORDER_OVERVIEW_MODEL IMPLEMENTATION.
     ENDMETHOD.
 
 
-    METHOD get_data_type.
+    METHOD change_structur_from_value.
 
       TRY.
           DATA(lv_column_type) = cl_abap_typedescr=>describe_by_data( iv_wert )->absolute_name.

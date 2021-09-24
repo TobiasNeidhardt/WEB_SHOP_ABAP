@@ -9,19 +9,20 @@ CLASS ltc_homescreen_model_orders DEFINITION FOR TESTING RISK LEVEL HARMLESS.
           lt_order_data         TYPE TABLE OF zweb_order,
           l_exception_occured   TYPE abap_bool,
           homescreen_controller TYPE REF TO zcl_homescreen_controller,
-          login_controller      TYPE REF TO zcl_customer_login_controller.
+          login_controller      TYPE REF TO zcl_customer_login_controller,
+          mo_log                TYPE REF TO zcl_webshop_log.
 
-    CONSTANTS: lc_customer_number    TYPE zweb_customer_number VALUE '1',
-               lc_order_number_1     TYPE zweb_order_number VALUE  '1',
-               lc_order_number_2     TYPE zweb_order_number VALUE  '2',
-               lc_position_number_1  TYPE zweb_position_number VALUE '1',
-               lc_position_number_2  TYPE zweb_position_number VALUE '2',
-               lc_order_amount_1     TYPE zweb_order_amount VALUE 01,
-               lc_order_amount_2     TYPE zweb_order_amount VALUE 02,
-               lc_order_status       TYPE zweb_status VALUE 'BE',
-               lc_order_value        TYPE zweb_order_amount VALUE '100',
-               lc_status_in_progress TYPE zweb_status VALUE 'IB',
-               lc_status_completet   TYPE zweb_status VALUE 'AB'.
+    CONSTANTS: mc_customer_number    TYPE zweb_customer_number VALUE '1',
+               mc_order_number_1     TYPE zweb_order_number VALUE  '1',
+               mc_order_number_2     TYPE zweb_order_number VALUE  '2',
+               mc_position_number_1  TYPE zweb_position_number VALUE '1',
+               mc_position_number_2  TYPE zweb_position_number VALUE '2',
+               mc_order_amount_1     TYPE zweb_order_amount VALUE 01,
+               mc_order_amount_2     TYPE zweb_order_amount VALUE 02,
+               mc_order_status       TYPE zweb_status VALUE 'BE',
+               mc_order_value        TYPE zweb_order_amount VALUE '100',
+               mc_status_in_progress TYPE zweb_status VALUE 'IB',
+               mc_status_completet   TYPE zweb_status VALUE 'AB'.
 
 
     CLASS-DATA: m_environment TYPE REF TO if_osql_test_environment.
@@ -61,7 +62,6 @@ CLASS ltc_homescreen_model_orders DEFINITION FOR TESTING RISK LEVEL HARMLESS.
       check_if_order_exist_true FOR TESTING,
       check_if_order_exist_false FOR TESTING.
 
-
 ENDCLASS.
 
 CLASS ltc_homescreen_model_orders IMPLEMENTATION.
@@ -73,15 +73,16 @@ CLASS ltc_homescreen_model_orders IMPLEMENTATION.
   METHOD setup.
 
     "given
-    lt_order_data = VALUE #( ( order_number = lc_order_number_1 position_number = lc_position_number_1 order_amount = lc_order_amount_1 status = lc_order_status customer_number = lc_customer_number )
-                             ( order_number = lc_order_number_1 position_number = lc_position_number_2 order_amount = lc_order_amount_1 status = lc_order_status customer_number = lc_customer_number )
-                             ( order_number = lc_order_number_2 position_number = lc_position_number_1 order_amount = lc_order_amount_1 status = lc_status_completet customer_number = lc_customer_number ) ).
-    login_controller = NEW zcl_customer_login_controller(  ).
-    homescreen_controller = NEW zcl_homescreen_controller( io_login_controller = login_controller iv_customer_number =  lc_customer_number iv_email =  'test@web.de').
+    lt_order_data = VALUE #( ( order_number = mc_order_number_1 position_number = mc_position_number_1 order_amount = mc_order_amount_1 status = mc_order_status customer_number = mc_customer_number )
+                             ( order_number = mc_order_number_1 position_number = mc_position_number_2 order_amount = mc_order_amount_1 status = mc_order_status customer_number = mc_customer_number )
+                             ( order_number = mc_order_number_2 position_number = mc_position_number_1 order_amount = mc_order_amount_1 status = mc_status_completet customer_number = mc_customer_number ) ).
+    login_controller = NEW zcl_customer_login_controller( io_log = mo_log  ).
+    mo_log = NEW zcl_webshop_log( iv_object = 'ZWEB' iv_suobj = 'ZWEB' ).
+    homescreen_controller = NEW zcl_homescreen_controller( io_login_controller = login_controller iv_customer_number =  mc_customer_number iv_email =  'test@web.de' io_log = mo_log ).
 
     m_environment->clear_doubles( ).
 
-    m_cut = NEW zcl_homescreen_model( io_home_screen_controller = homescreen_controller iv_customer_number = lc_customer_number ).
+    m_cut = NEW zcl_homescreen_model( io_home_screen_controller = homescreen_controller iv_customer_number = mc_customer_number io_log = mo_log ).
 
     m_environment->insert_test_data( EXPORTING i_data = lt_order_data ).
 
@@ -105,24 +106,24 @@ CLASS ltc_homescreen_model_orders IMPLEMENTATION.
         cl_abap_unit_assert=>assert_equals( EXPORTING act =  m_cut->mt_cart[ 1 ]-article_designation
                                                      exp =  lv_article-designation ).
       CATCH zcx_webshop_exception_new INTO DATA(e_text).
-        MESSAGE e_text->get_text( ) TYPE 'S' DISPLAY LIKE 'E'.
+        cl_abap_unit_assert=>fail( EXPORTING msg = 'Beim hinzufügen ist ein Fehler aufgetreten' ).
     ENDTRY.
   ENDMETHOD.
 
   METHOD check_delete_position.
     "when
     TRY.
-        m_cut->delete_position( is_position = VALUE #( order_number = lc_order_number_1
-                                                       position_number = lc_position_number_1
-                                                       status = lc_order_status ) ).
+        m_cut->delete_position( is_position = VALUE #( order_number = mc_order_number_1
+                                                       position_number = mc_position_number_1
+                                                       status = mc_order_status ) ).
       CATCH zcx_webshop_exception_new .
         cl_abap_unit_assert=>fail( EXPORTING msg = 'Beim löschen ist ein Fehler aufgetreten' ).
     ENDTRY.
     "then
     SELECT *
-    FROM zweb_order
-    INTO TABLE @DATA(lt_data)
-    WHERE order_number = @lc_order_number_1.
+      FROM zweb_order
+      INTO TABLE @DATA(lt_data)
+      WHERE order_number = @mc_order_number_1.
 
 
     IF sy-subrc <> 0.
@@ -143,50 +144,48 @@ CLASS ltc_homescreen_model_orders IMPLEMENTATION.
         "given
         m_environment->clear_doubles( ).
 
-        m_cut->delete_position( is_position = VALUE #( order_number = lc_order_number_1
-                                                   position_number = lc_position_number_1
-                                                   status = lc_order_status ) ).
+        m_cut->delete_position( is_position = VALUE #( order_number = mc_order_number_1
+                                                   position_number = mc_position_number_1
+                                                   status = mc_order_status ) ).
       CATCH zcx_webshop_exception_new.
         l_exception_occured = abap_true.
     ENDTRY.
     "then
-    cl_abap_unit_assert=>assert_true(
-      act = l_exception_occured
-      msg = 'In der Methode delete_position wird keine Exception geworfen, falls ein Fehler auftritt!'
-    ).
+    cl_abap_unit_assert=>assert_true( act = l_exception_occured
+                                      msg = 'Es wurde keine Exception geworfen' ).
+
   ENDMETHOD.
 
   METHOD delete_pos_status_exc_exist.
     TRY.
         "when
-        m_cut->delete_position( is_position = VALUE #( order_number = lc_order_number_1
-                                                   position_number = lc_position_number_1
-                                                   status = lc_status_in_progress ) ).
+        m_cut->delete_position( is_position = VALUE #( order_number = mc_order_number_1
+                                                       position_number = mc_position_number_1
+                                                       status = mc_status_in_progress ) ).
 
       CATCH zcx_webshop_exception_new.
         l_exception_occured = abap_true.
     ENDTRY.
     "then
-    cl_abap_unit_assert=>assert_true(
-      act = l_exception_occured
-      msg = 'In der Methode delete_position wird keine Exception geworfen, der Status AB oder IB ist!'
-    ).
+    cl_abap_unit_assert=>assert_true( act = l_exception_occured
+                                      msg = 'wenn der Status AB oder IB ist wird keine Exception geworfen!' ).
+
   ENDMETHOD.
 
   METHOD check_edit_quantity_of_pos.
     TRY.
         "when
-        m_cut->edit_quantity_of_position( is_position = VALUE #( order_number = lc_order_number_1
-                                                       position_number = lc_position_number_1
-                                                       status = lc_order_status ) iv_quantity = 5 ).
+        m_cut->edit_quantity_of_position( is_position = VALUE #( order_number = mc_order_number_1
+                                                       position_number = mc_position_number_1
+                                                       status = mc_order_status ) iv_quantity = 5 ).
       CATCH zcx_webshop_exception_new .
         cl_abap_unit_assert=>fail( EXPORTING msg = 'Beim anpassen der Menge ist ein Fehler aufgetreten' ).
     ENDTRY.
     "then
     SELECT *
-    FROM zweb_order
-    INTO TABLE @DATA(lt_data)
-    WHERE order_amount = 5 .
+      FROM zweb_order
+      INTO TABLE @DATA(lt_data)
+      WHERE order_amount = 5 .
 
     IF sy-subrc <> 0.
       cl_abap_unit_assert=>fail( EXPORTING msg = 'Bestellmenge wurde nicht geändert!'  ).
@@ -200,16 +199,16 @@ CLASS ltc_homescreen_model_orders IMPLEMENTATION.
         "given
         m_environment->clear_doubles( ).
         "when
-        m_cut->edit_quantity_of_position( is_position = VALUE #( order_number = lc_order_number_1
-                                                       position_number = lc_position_number_1
-                                                       status = lc_order_status ) iv_quantity = 5 ).
+        m_cut->edit_quantity_of_position( is_position = VALUE #( order_number = mc_order_number_1
+                                                       position_number = mc_position_number_1
+                                                       status = mc_order_status ) iv_quantity = 5 ).
       CATCH zcx_webshop_exception_new.
         l_exception_occured = abap_true.
     ENDTRY.
     "then
     cl_abap_unit_assert=>assert_true(
       act = l_exception_occured
-      msg = 'In der Methode edit_quantity_of_position wird keine Exception geworfen, falls ein Fehler auftritt!'
+      msg = 'Im Fehlerfall wird keine Exception geworfen'
     ).
   ENDMETHOD.
 
@@ -222,19 +221,19 @@ CLASS ltc_homescreen_model_orders IMPLEMENTATION.
         m_cut->get_all_orders_from_customer(  ).
         mt_orders = m_cut->mt_order.
       CATCH zcx_webshop_exception_new .
-        cl_abap_unit_assert=>fail( EXPORTING msg = 'Beim Aufruf der Methode get_all_orders_from_customer ist ein Fehler aufgetreten' ).
+        cl_abap_unit_assert=>fail( EXPORTING msg = 'Beim Aufruf ist ein Fehler aufgetreten' ).
     ENDTRY.
     "then
     IF m_cut->mt_order IS INITIAL.
-      cl_abap_unit_assert=>fail( EXPORTING msg = 'In der Methode get_all_orders_from_customer wurden keine Daten gelesen!').
+      cl_abap_unit_assert=>fail( EXPORTING msg = 'Es wurden keine Daten gelesen!').
     ELSE.
       "In Tabelle zweb_order werden einzelne Bestellpositionen auch als einzelne  Bestellung gespeichert
       cl_abap_unit_assert=>assert_equals( EXPORTING act =  mt_orders[ 1 ]-order_number
-                                                    exp =  lc_order_number_1 ).
+                                                    exp =  mc_order_number_1 ).
       cl_abap_unit_assert=>assert_equals( EXPORTING act =  mt_orders[ 2 ]-order_number
-                                                    exp =  lc_order_number_1 ).
+                                                    exp =  mc_order_number_1 ).
       cl_abap_unit_assert=>assert_equals( EXPORTING act =  mt_orders[ 3 ]-order_number
-                                                    exp =  lc_order_number_2 ).
+                                                    exp =  mc_order_number_2 ).
     ENDIF.
   ENDMETHOD.
 
@@ -254,7 +253,7 @@ CLASS ltc_homescreen_model_orders IMPLEMENTATION.
     "then
     cl_abap_unit_assert=>assert_true(
       act = l_exception_occured
-      msg = 'In der Methode get_all_orders_from_customer wird keine Exception geworfen, falls ein Fehler auftritt!'
+      msg = 'Es wird keine Exception geworfen, falls ein Fehler auftritt!'
     ).
   ENDMETHOD.
 
@@ -264,10 +263,10 @@ CLASS ltc_homescreen_model_orders IMPLEMENTATION.
         "when
         m_cut->get_all_orders_from_customer(  ).
       CATCH zcx_webshop_exception_new .
-        cl_abap_unit_assert=>fail( EXPORTING msg = 'Beim Aufruf der Methode get_all_orders_from_customer ist ein Fehler aufgetreten' ).
+        cl_abap_unit_assert=>fail( EXPORTING msg = 'Beim Aufruf ist ein Fehler aufgetreten' ).
     ENDTRY.
     IF m_cut->mt_order IS INITIAL.
-      cl_abap_unit_assert=>fail( EXPORTING msg = 'In der Methode get_all_orders_from_customer wurden keine Daten gelesen. Erst wenn die Methode get_all_orders_from_customer funktioniert, kann dieser Test positiv werden.').
+      cl_abap_unit_assert=>fail( EXPORTING msg = 'Es wurden keine Daten gelesen. Erst wenn die Methode get_all_orders_from_customer funktioniert, kann dieser Test positiv werden.').
     ELSE.
       lv_done_orders = m_cut->get_done_order_from_mt_order(  ).
 
@@ -283,10 +282,10 @@ CLASS ltc_homescreen_model_orders IMPLEMENTATION.
         "when
         m_cut->get_all_orders_from_customer(  ).
       CATCH zcx_webshop_exception_new .
-        cl_abap_unit_assert=>fail( EXPORTING msg = 'In der Methode get_all_orders_from_customer wurden keine Daten gelesen. Erst wenn die Methode get_all_orders_from_customer funktioniert, kann dieser Test positiv werden.' ).
+        cl_abap_unit_assert=>fail( EXPORTING msg = 'Es wurden keine Daten gelesen. Erst wenn die Methode get_all_orders_from_customer funktioniert, kann dieser Test positiv werden.' ).
     ENDTRY.
     IF m_cut->mt_order IS INITIAL.
-      cl_abap_unit_assert=>fail( EXPORTING msg = 'In der Methode get_all_orders_from_customer wurden keine Daten gelesen. Erst wenn die Methode get_all_orders_from_customer funktioniert, kann dieser Test positiv werden.').
+      cl_abap_unit_assert=>fail( EXPORTING msg = 'Es wurden keine Daten gelesen. Erst wenn die Methode get_all_orders_from_customer funktioniert, kann dieser Test positiv werden.').
     ELSE.
       lv_done_orders = m_cut->get_open_order_from_mt_order(  ).
 
@@ -311,7 +310,7 @@ CLASS ltc_homescreen_model_orders IMPLEMENTATION.
     "then
     cl_abap_unit_assert=>assert_true(
      act = lv_exist
-     msg = 'Die Methode check_if_order_exist funktioniert nicht richitg. Bestellnummer 1 existiert!'
+     msg = 'Die Methode check_if_order_exist gibt false zurück, obwohl die Bestellnummer 1 existiert!'
    ).
 
   ENDMETHOD.
@@ -331,15 +330,12 @@ CLASS ltc_homescreen_model_orders IMPLEMENTATION.
     "then
     cl_abap_unit_assert=>assert_false(
      act = lv_exist
-     msg = 'Die Methode check_if_order_exist funktioniert nicht richitg. Bestellnummer 3 existiert nicht!'
+     msg = 'Die Methode check_if_order_exist gibt true zurück, obwohl die Bestellnummer 3 nicht existiert!'
    ).
 
   ENDMETHOD.
 
 ENDCLASS.
-
-
-
 
 
 CLASS ltc_homescreen_model_artikel DEFINITION DEFERRED.
@@ -352,23 +348,28 @@ CLASS ltc_homescreen_model_artikel DEFINITION FOR TESTING RISK LEVEL HARMLESS.
           lt_article_data       TYPE TABLE OF zweb_article,
           l_exception_occured   TYPE abap_bool,
           homescreen_controller TYPE REF TO zcl_homescreen_controller,
-          login_controller      TYPE REF TO zcl_customer_login_controller.
+          login_controller      TYPE REF TO zcl_customer_login_controller,
+          mo_log                TYPE REF TO zcl_webshop_log.
 
 
     CLASS-DATA: m_environment TYPE REF TO if_osql_test_environment.
     CLASS-METHODS class_setup.
     METHODS setup.
-    METHODS check_select_articles FOR TESTING.
-    METHODS check_remove_item_from_card FOR TESTING.
+    METHODS:
+      "!Test method for select_articles
+      check_select_articles FOR TESTING.
+    METHODS:
+      "! Test method for remove_item_from_cart
+      check_remove_item_from_card FOR TESTING.
 
-    CONSTANTS: lc_customer         TYPE zweb_customer_number VALUE '1',
-               lc_article_number_1 TYPE zweb_article_number VALUE '1',
-               lc_article_number_2 TYPE zweb_article_number VALUE '2',
-               lc_article_number_3 TYPE zweb_article_number VALUE '3',
-               lc_description_1    TYPE zweb_description VALUE 'Bildschirm',
-               lc_description_2    TYPE zweb_description VALUE 'Tastatur',
-               lc_description_3    TYPE zweb_description VALUE 'Maus',
-               lc_currency         TYPE zweb_currency VALUE 'Euro'.
+    CONSTANTS: mc_customer         TYPE zweb_customer_number VALUE '1',
+               mc_article_number_1 TYPE zweb_article_number VALUE '1',
+               mc_article_number_2 TYPE zweb_article_number VALUE '2',
+               mc_article_number_3 TYPE zweb_article_number VALUE '3',
+               mc_description_1    TYPE zweb_description VALUE 'Bildschirm',
+               mc_description_2    TYPE zweb_description VALUE 'Tastatur',
+               mc_description_3    TYPE zweb_description VALUE 'Maus',
+               mc_currency         TYPE zweb_currency VALUE 'Euro'.
 
 
 
@@ -378,16 +379,17 @@ CLASS ltc_homescreen_model_artikel IMPLEMENTATION.
 
   METHOD setup.
     "given
-    lt_article_data = VALUE #( ( article_number = lc_article_number_1 designation = lc_description_1 price = 200 currency = lc_currency )
-                               ( article_number = lc_article_number_2 designation = lc_description_2 price = 70 currency = lc_currency )
-                               ( article_number = lc_article_number_3 designation = lc_description_3 price = 30 currency = lc_currency ) ).
+    lt_article_data = VALUE #( ( article_number = mc_article_number_1 designation = mc_description_1 price = 200 currency = mc_currency )
+                               ( article_number = mc_article_number_2 designation = mc_description_2 price = 70 currency = mc_currency )
+                               ( article_number = mc_article_number_3 designation = mc_description_3 price = 30 currency = mc_currency ) ).
 
-    login_controller = NEW zcl_customer_login_controller(  ).
-    homescreen_controller = NEW zcl_homescreen_controller( io_login_controller = login_controller iv_customer_number =  lc_customer iv_email =  'test@web.de').
+    mo_log = NEW zcl_webshop_log( iv_object = 'ZWEB' iv_suobj = 'ZWEB' ).
+    login_controller = NEW zcl_customer_login_controller( io_log = mo_log  ).
+    homescreen_controller = NEW zcl_homescreen_controller( io_login_controller = login_controller iv_customer_number =  mc_customer iv_email =  'test@web.de' io_log = mo_log ).
 
     m_environment->clear_doubles( ).
 
-    m_cut = NEW zcl_homescreen_model( io_home_screen_controller = homescreen_controller iv_customer_number = lc_customer ).
+    m_cut = NEW zcl_homescreen_model( io_home_screen_controller = homescreen_controller iv_customer_number = mc_customer io_log = mo_log ).
     m_environment->insert_test_data( EXPORTING i_data = lt_article_data ).
   ENDMETHOD.
 
@@ -419,26 +421,21 @@ CLASS ltc_homescreen_model_artikel IMPLEMENTATION.
 
   METHOD check_remove_item_from_card.
     "given
-    m_cut->mt_cart  = VALUE #( ( article_number = lc_article_number_1 article_description = lc_description_1  price = 200 currency = lc_currency )
-                            ( article_number = lc_article_number_2 article_description = lc_description_2  price = 70 currency = lc_currency )
-                            ( article_number = lc_article_number_3 article_description = lc_description_3  price = 30 currency = lc_currency )    ).
+    m_cut->mt_cart  = VALUE #( ( article_number = mc_article_number_1 article_description = mc_description_1  price = 200 currency = mc_currency )
+                            ( article_number = mc_article_number_2 article_description = mc_description_2  price = 70 currency = mc_currency )
+                            ( article_number = mc_article_number_3 article_description = mc_description_3  price = 30 currency = mc_currency )    ).
 
     "when
-    m_cut->remove_item_from_cart( iv_article_number = lc_article_number_2 ).
+    m_cut->remove_item_from_cart( iv_article_number = mc_article_number_2 ).
 
     "then
     cl_abap_unit_assert=>assert_equals( EXPORTING act =  m_cut->mt_cart[ 1 ]-article_number
-                                                exp = lc_article_number_1 ).
+                                                exp = mc_article_number_1 ).
     cl_abap_unit_assert=>assert_equals( EXPORTING act =  m_cut->mt_cart[ 2 ]-article_number
-                                                  exp =  lc_article_number_3 ).
+                                                  exp =  mc_article_number_3 ).
 
   ENDMETHOD.
 ENDCLASS.
-
-
-
-
-
 
 
 CLASS ltc_homescreen_model_adress DEFINITION DEFERRED.
@@ -451,22 +448,25 @@ CLASS ltc_homescreen_model_adress DEFINITION FOR TESTING RISK LEVEL HARMLESS.
           lt_adress_data        TYPE TABLE OF zweb_order_ad,
           l_exception_occured   TYPE abap_bool,
           homescreen_controller TYPE REF TO zcl_homescreen_controller,
-          login_controller      TYPE REF TO zcl_customer_login_controller.
+          login_controller      TYPE REF TO zcl_customer_login_controller,
+          mo_log                TYPE REF TO zcl_webshop_log.
 
-    CONSTANTS: lc_customer_number TYPE zweb_customer_number VALUE '1',
-               lc_order_number_1  TYPE numc10 VALUE 1,
-               lc_order_number_2  TYPE numc10 VALUE 2,
-               lc_street_1        TYPE zweb_street VALUE 'Schlossallee',
-               lc_street_2        TYPE zweb_street VALUE 'Parkstrasse',
-               lc_zip_code        TYPE zweb_postalcode VALUE 97070,
-               lc_city            TYPE zweb_city VALUE 'Würzburg'.
+    CONSTANTS: mc_customer_number TYPE zweb_customer_number VALUE '1',
+               mc_order_number_1  TYPE numc10 VALUE 1,
+               mc_order_number_2  TYPE numc10 VALUE 2,
+               mc_street_1        TYPE zweb_street VALUE 'Schlossallee',
+               mc_street_2        TYPE zweb_street VALUE 'Parkstrasse',
+               mc_zip_code        TYPE zweb_postalcode VALUE 97070,
+               mc_city            TYPE zweb_city VALUE 'Würzburg'.
 
 
 
     CLASS-DATA: m_environment TYPE REF TO if_osql_test_environment.
     CLASS-METHODS class_setup.
     METHODS setup.
-    METHODS check_insert_address_of_order FOR TESTING.
+    METHODS:
+      "!Test method for insert_address_of_order
+      check_insert_address_of_order FOR TESTING.
 
 
 
@@ -478,14 +478,15 @@ CLASS ltc_homescreen_model_adress IMPLEMENTATION.
 
   METHOD setup.
     "given
-    lt_adress_data = VALUE #( ( order_number = lc_order_number_1 street = lc_street_1 house_number = 1 zip_code = lc_zip_code city = lc_city ) ).
+    lt_adress_data = VALUE #( ( order_number = mc_order_number_1 street = mc_street_1 house_number = 1 zip_code = mc_zip_code city = mc_city ) ).
 
-    login_controller = NEW zcl_customer_login_controller(  ).
-    homescreen_controller = NEW zcl_homescreen_controller( io_login_controller = login_controller iv_customer_number =  lc_customer_number iv_email =  'test@web.de').
+    mo_log = NEW zcl_webshop_log( iv_object = 'ZWEB' iv_suobj = 'ZWEB' ).
+    login_controller = NEW zcl_customer_login_controller( io_log = mo_log ).
+    homescreen_controller = NEW zcl_homescreen_controller( io_login_controller = login_controller iv_customer_number =  mc_customer_number iv_email =  'test@web.de' io_log = mo_log ).
 
     m_environment->clear_doubles( ).
 
-    m_cut = NEW zcl_homescreen_model( io_home_screen_controller = homescreen_controller iv_customer_number = lc_customer_number ).
+    m_cut = NEW zcl_homescreen_model( io_home_screen_controller = homescreen_controller iv_customer_number = mc_customer_number io_log = mo_log ).
     m_environment->insert_test_data( EXPORTING i_data = lt_adress_data ).
   ENDMETHOD.
 
@@ -497,30 +498,23 @@ CLASS ltc_homescreen_model_adress IMPLEMENTATION.
     DATA: lt_adress TYPE TABLE OF zweb_order_ad.
 
     "given
-    m_cut->ms_order_address = VALUE #( street = lc_street_2 houese_number = 2 zip_code = lc_zip_code city = lc_city ).
+    m_cut->ms_order_address = VALUE #( street = mc_street_2 houese_number = 2 zip_code = mc_zip_code city = mc_city ).
 
     "when
-    m_cut->insert_address_of_order( iv_order_number = lc_order_number_2 ).
+    m_cut->insert_address_of_order( iv_order_number = mc_order_number_2 ).
 
     "then
     SELECT SINGLE street
-    FROM zweb_order_ad INTO @DATA(ls_adress)
-    WHERE street = @lc_street_2.
+        FROM zweb_order_ad INTO @DATA(ls_adress)
+        WHERE street = @mc_street_2.
 
     IF sy-subrc <> 0.
       cl_abap_unit_assert=>fail( EXPORTING msg = 'Adresse wurde nicht eingefügt').
     ENDIF.
 
-
-
   ENDMETHOD.
 
-
 ENDCLASS.
-
-
-
-
 
 CLASS ltc_homescreen_model_customer DEFINITION DEFERRED.
 CLASS zcl_homescreen_model DEFINITION LOCAL FRIENDS ltc_homescreen_model_customer.
@@ -532,29 +526,28 @@ CLASS ltc_homescreen_model_customer DEFINITION FOR TESTING RISK LEVEL HARMLESS.
           lt_adress_data        TYPE TABLE OF zweb_customer,
           l_exception_occured   TYPE abap_bool,
           homescreen_controller TYPE REF TO zcl_homescreen_controller,
-          login_controller      TYPE REF TO zcl_customer_login_controller.
+          login_controller      TYPE REF TO zcl_customer_login_controller,
+          mo_log                TYPE REF TO zcl_webshop_log.
 
-    CONSTANTS: lc_customer_number_1 TYPE zweb_customer_number VALUE '1',
-               lc_customer_number_2 TYPE zweb_customer_number VALUE '2',
-               lc_name_1            TYPE zweb_name VALUE 'Meyer',
-               lc_name_2            TYPE zweb_name VALUE 'Müller',
-               lc_street_1          TYPE zweb_street VALUE 'Schlossallee',
-               lc_street_2          TYPE zweb_street VALUE 'Parkstrasse',
-               lc_house_number      TYPE zweb_house_nr VALUE 1,
-               lc_zip_code          TYPE zweb_postalcode VALUE 97070,
-               lc_city              TYPE zweb_city VALUE 'Würzburg'.
+    CONSTANTS: mc_customer_number_1 TYPE zweb_customer_number VALUE '1',
+               mc_customer_number_2 TYPE zweb_customer_number VALUE '2',
+               mc_name_1            TYPE zweb_name VALUE 'Meyer',
+               mc_name_2            TYPE zweb_name VALUE 'Müller',
+               mc_street_1          TYPE zweb_street VALUE 'Schlossallee',
+               mc_street_2          TYPE zweb_street VALUE 'Parkstrasse',
+               mc_house_number      TYPE zweb_house_nr VALUE 1,
+               mc_zip_code          TYPE zweb_postalcode VALUE 97070,
+               mc_city              TYPE zweb_city VALUE 'Würzburg'.
 
 
 
     CLASS-DATA: m_environment TYPE REF TO if_osql_test_environment.
     CLASS-METHODS class_setup.
     METHODS setup.
-    METHODS check_get_adress_of_customer FOR TESTING.
-    METHODS get_adress_of_custom_exc_exist FOR TESTING.
-
-
-
-
+    METHODS:
+      "! Test method for get_address_of_customer
+      check_get_adress_of_customer FOR TESTING,
+      get_adress_of_custom_exc_exist FOR TESTING.
 
 ENDCLASS.
 
@@ -562,15 +555,16 @@ CLASS ltc_homescreen_model_customer IMPLEMENTATION.
 
   METHOD setup.
     "given
-    lt_adress_data = VALUE #( ( customer_number = lc_customer_number_1 name = lc_name_1 street = lc_street_1 house_number = lc_house_number zip_code = lc_zip_code city = lc_city )
-                              ( customer_number = lc_customer_number_2 name = lc_name_2 street = lc_street_2 house_number = lc_house_number zip_code = lc_zip_code city = lc_city ) ).
+    lt_adress_data = VALUE #( ( customer_number = mc_customer_number_1 name = mc_name_1 street = mc_street_1 house_number = mc_house_number zip_code = mc_zip_code city = mc_city )
+                              ( customer_number = mc_customer_number_2 name = mc_name_2 street = mc_street_2 house_number = mc_house_number zip_code = mc_zip_code city = mc_city ) ).
 
-    login_controller = NEW zcl_customer_login_controller(  ).
-    homescreen_controller = NEW zcl_homescreen_controller( io_login_controller = login_controller iv_customer_number =  lc_customer_number_2 iv_email =  'test@web.de').
+    mo_log = NEW zcl_webshop_log( iv_object = 'ZWEB' iv_suobj = 'ZWEB' ).
+    login_controller = NEW zcl_customer_login_controller( io_log = mo_log ).
+    homescreen_controller = NEW zcl_homescreen_controller( io_login_controller = login_controller iv_customer_number =  mc_customer_number_2 iv_email =  'test@web.de' io_log = mo_log ).
 
     m_environment->clear_doubles( ).
 
-    m_cut = NEW zcl_homescreen_model( io_home_screen_controller = homescreen_controller iv_customer_number = lc_customer_number_2 ).
+    m_cut = NEW zcl_homescreen_model( io_home_screen_controller = homescreen_controller iv_customer_number = mc_customer_number_2 io_log = mo_log ).
     m_environment->insert_test_data( EXPORTING i_data = lt_adress_data ).
   ENDMETHOD.
 

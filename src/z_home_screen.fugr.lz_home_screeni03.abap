@@ -8,7 +8,7 @@
 *----------------------------------------------------------------------*
 MODULE user_command_9002 INPUT.
 
-  DATA(ls_order_address) = Value zsbt_s_address(  street        = p_street
+  DATA(ls_order_address) = Value zweb_s_adress(  street        = p_street
                                                   houese_number = p_house_number
                                                   zip_code      = p_zip_code
                                                   city          = p_address_city ).

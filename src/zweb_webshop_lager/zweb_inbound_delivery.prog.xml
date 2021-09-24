@@ -12,7 +12,7 @@
    <TPOOL>
     <item>
      <ID>R</ID>
-     <ENTRY>Programm ZSBT_INBOUND_DELIVERY</ENTRY>
+     <ENTRY>Programm ZWEB_INBOUND_DELIVERY</ENTRY>
      <LENGTH>30</LENGTH>
     </item>
    </TPOOL>

@@ -7,12 +7,13 @@ CLASS zcl_homescreen_model DEFINITION
 
     DATA:
       mt_order                 TYPE zweb_tt_order,
-      mt_articles              TYPE TABLE OF zweb_article,
+      mt_articles              TYPE TABLE OF zweb_article WITH KEY mandt article_number,
       mt_articles_string_table TYPE TABLE OF string,
       mt_searched_articles     TYPE match_result_tab,
       mt_cart_order            TYPE TABLE OF zweb_order,
       mt_articles_out          TYPE TABLE OF zweb_article,
-      mt_cart                  TYPE TABLE OF zweb_s_cart.
+      mt_cart                  TYPE TABLE OF zweb_s_cart,
+      mo_log                   TYPE REF TO zcl_webshop_log.
 
     METHODS: search_entries_to_new_table
       IMPORTING
@@ -25,7 +26,8 @@ CLASS zcl_homescreen_model DEFINITION
       constructor
         IMPORTING
           !io_home_screen_controller TYPE REF TO zcl_homescreen_controller
-          !iv_customer_number        TYPE zweb_customer_number,
+          !iv_customer_number        TYPE zweb_customer_number
+          !io_log                    TYPE REF TO zcl_webshop_log,
       add_to_cart
         IMPORTING
                   !iv_number_of_articles TYPE zweb_order_amount
@@ -132,7 +134,9 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
     APPEND ls_cart TO me->mt_cart.
     IF sy-subrc <> 0.
-      MESSAGE i087(z_web_shop) INTO DATA(ls_msg)..
+      MESSAGE i087(z_web_shop) INTO DATA(ls_msg).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
 
@@ -174,9 +178,9 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
     DATA: lt_order_to_show TYPE zweb_tt_order.
     lt_order_to_show = me->mo_home_screen_controller->mt_order_to_show.
     SELECT SINGLE @abap_true
-    FROM @lt_order_to_show AS orders
-    WHERE orders~order_number = @is_selected_row-order_number
-    INTO @DATA(lv_exists).
+        FROM @lt_order_to_show AS orders
+        WHERE orders~order_number = @is_selected_row-order_number
+        INTO @DATA(lv_exists).
 
     rv_exist = lv_exists.
 
@@ -187,7 +191,7 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
     me->mo_home_screen_controller = io_home_screen_controller.
     me->mv_customernumber         = iv_customer_number.
-
+    me->mo_log = io_log.
     me->select_articles( ).
 
   ENDMETHOD.
@@ -197,6 +201,8 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
     IF is_position-status = mc_status_in_progress OR is_position-status = mc_status_completed.
       MESSAGE i061(z_web_shop) INTO DATA(ls_msg).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ELSE.
       DELETE me->mo_home_screen_controller->mt_order_to_show WHERE order_number   = is_position-order_number
@@ -204,6 +210,8 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
       DELETE zweb_order FROM is_position.
       IF sy-subrc <> 0.
         MESSAGE i060(z_web_shop) INTO ls_msg.
+        me->mo_log->add_msg_from_sys( ).
+        me->mo_log->safe_log( ).
         RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
       ENDIF.
     ENDIF.
@@ -221,10 +229,12 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
     IF sy-subrc <> 0.
       ROLLBACK WORK.
       MESSAGE i068(z_web_shop) INTO DATA(lv_msg).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
 
-    COMMIT WORK.
+*    COMMIT WORK.
 
   ENDMETHOD.
 
@@ -248,6 +258,8 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       MESSAGE i059(z_web_shop) INTO DATA(ls_msg).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
 
@@ -264,6 +276,8 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
       WHERE customer_number = mv_customernumber.
     IF sy-subrc <> 0.
       MESSAGE i086(z_web_shop) INTO DATA(ls_msg).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
 
@@ -365,6 +379,8 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
     IF sy-subrc <> 0.
       MESSAGE i045(z_web_shop) INTO DATA(ls_msg).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
 
@@ -430,6 +446,8 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
            INTO TABLE @mt_articles_string_table.
     IF sy-subrc <> 0.
       MESSAGE i058(z_web_shop) INTO DATA(ls_msg).
+      me->mo_log->add_msg_from_sys( ).
+      me->mo_log->safe_log( ).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
   ENDMETHOD.

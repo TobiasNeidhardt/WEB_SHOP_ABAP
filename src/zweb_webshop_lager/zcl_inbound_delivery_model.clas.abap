@@ -18,9 +18,10 @@ CLASS zcl_inbound_delivery_model DEFINITION
         VALUE(rv_exists)   TYPE abap_bool .
     METHODS search_product_on_strg_place
       EXPORTING
-        !ev_warehouse     TYPE zweb_warehouse_number
-        !ev_storage_place TYPE zweb_storage_place
-        !ev_storage_area  TYPE zweb_storage_area .
+                !ev_warehouse     TYPE zweb_warehouse_number
+                !ev_storage_place TYPE zweb_storage_place
+                !ev_storage_area  TYPE zweb_storage_area
+      RAISING   zcx_webshop_exception_new.
     METHODS set_and_compare_str_place_scan
       IMPORTING
         !iv_storage_place       TYPE zweb_storage_place
@@ -36,9 +37,10 @@ CLASS zcl_inbound_delivery_model DEFINITION
         !iv_warehouse TYPE zweb_warehouse_number .
     METHODS continue_if_password_is_equal
       IMPORTING
-        !iv_warehousenum TYPE zweb_warehouse_number
-        !iv_userid       TYPE zweb_user_id
-        !iv_password     TYPE zweb_password .
+                !iv_warehousenum TYPE zweb_warehouse_number
+                !iv_userid       TYPE zweb_user_id
+                !iv_password     TYPE zweb_password
+      RAISING   zcx_webshop_exception_new.
     METHODS check_user_and_password
       IMPORTING
                 !iv_warehousenum TYPE zweb_warehouse_number
@@ -60,7 +62,8 @@ CLASS zcl_inbound_delivery_model DEFINITION
 
     METHODS search_product_in_wh .
     METHODS save_product_on_storage_place .
-    METHODS update_product_on_warehouse .
+    METHODS update_product_on_warehouse
+    RAISING zcx_webshop_exception_new.
     METHODS check_article_exist
       IMPORTING
                 !iv_article_number TYPE zweb_product_number
@@ -73,7 +76,6 @@ ENDCLASS.
 
 
 CLASS zcl_inbound_delivery_model IMPLEMENTATION.
-
 
   METHOD check_article_exist.
     "Proof if Article exists
@@ -134,22 +136,21 @@ CLASS zcl_inbound_delivery_model IMPLEMENTATION.
   METHOD save_and_commit.
 
     "Falls schon das Produkt vorhanden ist muss die Menge natürlich addiert werden
-    SELECT SINGLE FROM zsbt_db_lager
-      FIELDS bestand, mengeneinheit
-      WHERE lagerbereich  = @me->mv_storage_area
-        AND lagerplatz    = @me->mv_storage_place
-        AND lagernummer   = @me->mv_warehousenumber
-        AND produkt       = @me->mv_article_number
+    SELECT SINGLE FROM zweb_db_wh
+      FIELDS amount, unit
+      WHERE storage_area       = @me->mv_storage_area
+        AND storage_place      = @me->mv_storage_place
+        AND warehouse_number   = @me->mv_warehousenumber
+        AND product       = @me->mv_article_number
        INTO @DATA(ls_quantity_meins).
 
-    IF sy-subrc = 0 AND me->mv_meins = ls_quantity_meins-mengeneinheit.
-      mv_quantity = mv_quantity + ls_quantity_meins-bestand.
-    ELSEIF sy-subrc = 0 AND me->mv_meins <> ls_quantity_meins-mengeneinheit.
+    IF sy-subrc = 0 AND me->mv_meins = ls_quantity_meins-unit.
+      mv_quantity = mv_quantity + ls_quantity_meins-amount.
+    ELSEIF sy-subrc = 0 AND me->mv_meins <> ls_quantity_meins-unit.
       "Fehler Mengeneinheit stimmt nicht überein
       MESSAGE e083(zsbt_web_shop) INTO DATA(lv_message).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
-
 
     me->update_product_on_warehouse( ).
 
@@ -191,7 +192,7 @@ CLASS zcl_inbound_delivery_model IMPLEMENTATION.
     "sucht ob das Produkt auf einen Lagerplatz vorhanden ist
     SELECT SINGLE FROM zweb_db_wh
       FIELDS storage_area, storage_place
-          WHERE product     = @me->mv_article_number
+          WHERE product          = @me->mv_article_number
             AND warehouse_number = @me->mv_warehousenumber
       INTO @DATA(ls_storage_place).
 
@@ -226,16 +227,10 @@ CLASS zcl_inbound_delivery_model IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    TRY.
-        me->search_free_warehouse_position(  ).
-        ev_warehouse     = mv_warehousenumber.
-        ev_storage_place = me->mv_storage_place.
-        ev_storage_area  = me->mv_storage_area.
-      CATCH zcx_webshop_exception_new.
-
-    ENDTRY.
-
-
+    me->search_free_warehouse_position(  ).
+    ev_warehouse     = mv_warehousenumber.
+    ev_storage_place = me->mv_storage_place.
+    ev_storage_area  = me->mv_storage_area.
 
   ENDMETHOD.
 
@@ -271,7 +266,6 @@ CLASS zcl_inbound_delivery_model IMPLEMENTATION.
           MESSAGE s077(zsbt_web_shop) INTO lv_message.
           me->mo_log->add_msg_from_sys( ).
         ENDIF.
-
       CATCH zcx_webshop_exception_new.
 
     ENDTRY.
@@ -297,20 +291,20 @@ CLASS zcl_inbound_delivery_model IMPLEMENTATION.
   METHOD update_product_on_warehouse.
 
     "Produkt auf Lagerplatz updaten
-    DATA(ls_lager) = VALUE zsbt_db_lager( lagerbereich  = me->mv_storage_area
-                                          lagerplatz    = me->mv_storage_place
-                                          lagernummer   = me->mv_warehousenumber
-                                          produkt       = me->mv_article_number
-                                          bestand       = me->mv_quantity
-                                          mengeneinheit = me->mv_meins ).
+    DATA(ls_warehouse) = VALUE zweb_db_wh( warehouse_number = me->mv_warehousenumber
+                                           storage_area     = me->mv_storage_area
+                                           storage_place    = me->mv_storage_place
+                                           product          = me->mv_article_number
+                                           amount           = me->mv_quantity
+                                           unit             = me->mv_meins ).
 
-    UPDATE zsbt_db_lager FROM ls_lager.
+    UPDATE zweb_db_wh FROM ls_warehouse.
 
     IF sy-subrc <> 0.
       ROLLBACK WORK.
-      MESSAGE e077(zsbt_web_shop)  INTO DATA(lv_message).
+      MESSAGE e077(z_web_shop)  INTO DATA(lv_message).
       me->mo_log->add_msg_from_sys( ).
-      RAISE EXCEPTION TYPE zcx_sbt_web_shop_exception USING MESSAGE.
+      RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ELSE.
       COMMIT WORK.
     ENDIF.

@@ -1,18 +1,21 @@
 *"* use this source file for your ABAP unit test classes
+CLASS ltc_idm_warehouse_employee DEFINITION FOR TESTING
+RISK LEVEL HARMLESS
+DURATION SHORT.
 
-CLASS ltc_idm_warehouse_employee DEFINITION FOR TESTING RISK LEVEL HARMLESS.
+
   PUBLIC SECTION.
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA: m_cut                       TYPE REF TO zcl_inbound_delivery_model,
-          lt_order_data               TYPE TABLE OF zsbt_db_lager_ma,
+          lt_order_data               TYPE TABLE OF zweb_db_wh_ma,
           l_exception_occured         TYPE abap_bool,
           inbound_delivery_controller TYPE REF TO zcl_inbound_delivery_cntrl,
           webshop_log                 TYPE REF TO zcl_webshop_log.
-    CONSTANTS: lc_logobject          TYPE bal_s_log-object VALUE 'ZSBT',
-               lc_subobjec           TYPE bal_s_log-subobject VALUE 'ZUBT',
-               lc_warehouse_number_1 TYPE zsbt_lgnum_de VALUE 'wu01',
-               lc_warehouse_number_2 TYPE zsbt_lgnum_de VALUE 'wu02',
+    CONSTANTS: lc_logobject          TYPE bal_s_log-object VALUE 'ZWEB',
+               lc_subobjec           TYPE bal_s_log-subobject VALUE 'ZWEB',
+               lc_warehouse_number_1 TYPE zsbt_lgnum_de VALUE 'WU01',
+               lc_warehouse_number_2 TYPE zsbt_lgnum_de VALUE 'WU02',
                lc_user_number_1      TYPE char10 VALUE '01',
                lc_user_number_2      TYPE char10 VALUE '02',
                lc_password_1         TYPE string VALUE 'test',
@@ -22,19 +25,22 @@ CLASS ltc_idm_warehouse_employee DEFINITION FOR TESTING RISK LEVEL HARMLESS.
     CLASS-METHODS class_setup.
     METHODS setup.
     METHODS check_wrong_password FOR TESTING.
+    METHODS user_dont_exist FOR TESTING.
+    METHODS user_and_password_true FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 CLASS ltc_idm_warehouse_employee IMPLEMENTATION.
 
   METHOD class_setup.
+
     m_environment = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'zsbt_db_lager_ma' ) ) ).
 
   ENDMETHOD.
 
   METHOD setup.
     "given
-    lt_order_data = VALUE #( ( lagernummer = lc_warehouse_number_1 userid = lc_user_number_1 passwort = lc_password_1 )
-                             ( lagernummer = lc_warehouse_number_2 userid = lc_user_number_2 passwort = lc_password_2 ) ).
+    lt_order_data = VALUE #( ( warehouse_number = lc_warehouse_number_1 userid = lc_user_number_1 password = lc_password_1 )
+                             ( warehouse_number = lc_warehouse_number_2 userid = lc_user_number_2 password = lc_password_2 ) ).
 
     m_environment->clear_doubles( ).
     webshop_log = NEW zcl_webshop_log( iv_object = lc_logobject iv_suobj = lc_subobjec ).
@@ -54,15 +60,48 @@ CLASS ltc_idm_warehouse_employee IMPLEMENTATION.
     "when
     TRY.
         m_cut->check_user_and_password( iv_password = lv_password iv_userid = lc_user_number_1 iv_warehousenum = lc_warehouse_number_1 ).
-      CATCH zcx_sbt_web_shop_exception.
+      CATCH zcx_webshop_exception_new.
+        l_exception_occured = abap_true.
+    ENDTRY.
+
+    cl_abap_unit_assert=>assert_true( act = l_exception_occured
+                                      msg = 'Die Methode check_user_and_password funktioniert noch nicht richtig. Das Passwort ist falsch, deswegen sollte eine Exception geworfen werden.').
+
+  ENDMETHOD.
+
+  "toDo:
+  METHOD user_dont_exist.
+    "given
+    DATA: lv_user TYPE zweb_user_id VALUE 'Wrong_User'.
+    "when
+    TRY.
+        m_cut->check_user_and_password( iv_warehousenum = lc_warehouse_number_1
+                                        iv_userid       = lv_user
+                                        iv_password     = lc_password_1 ).
+
+      CATCH zcx_webshop_exception_new.
         l_exception_occured = abap_true.
     ENDTRY.
     "then
-    cl_abap_unit_assert=>assert_true(
-      act = l_exception_occured
-      msg = 'Die Methode check_user_and_password funktioniert noch nicht richtig. Das Passwort ist falsch, deswegen sollte eine Exception geworfen werden.'
-    ).
 
+    cl_abap_unit_assert=>assert_true( act = l_exception_occured
+                                      msg = 'Der User ist nicht vorhanden es sollte eine Exception geworfen werden.').
+
+  ENDMETHOD.
+
+  METHOD user_and_password_true.
+
+    "when
+    TRY.
+        m_cut->check_user_and_password( iv_warehousenum = lc_warehouse_number_1
+                                        iv_userid       = lc_user_number_1
+                                        iv_password     = lc_password_1 ).
+      CATCH zcx_webshop_exception_new.
+        l_exception_occured = abap_true.
+    ENDTRY.
+    "then
+    cl_abap_unit_assert=>assert_true( act = l_exception_occured
+                                      msg = 'Der User ist nicht vorhanden es sollte eine Exception geworfen werden.').
 
   ENDMETHOD.
 
@@ -105,7 +144,7 @@ ENDCLASS.
 CLASS ltc_idm_warehouse IMPLEMENTATION.
 
   METHOD class_setup.
-    m_environment = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'zsbt_db_lager' ) ) ).
+    m_environment = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'zweb_db_wh' ) ) ).
 
   ENDMETHOD.
 
@@ -141,10 +180,8 @@ CLASS ltc_idm_warehouse IMPLEMENTATION.
         l_exception_occured = abap_true.
     ENDTRY.
     "then
-    cl_abap_unit_assert=>assert_true(
-      act = l_exception_occured
-      msg = 'Die Methode update_product_on_warehouse wirft keine Exception falls kein passendes Produkt zum updaten in der Datenbank existiert.'
-    ).
+    cl_abap_unit_assert=>assert_true( act = l_exception_occured
+                                      msg = 'Die Methode update_product_on_warehouse wirft keine Exception falls kein passendes Produkt zum updaten in der Datenbank existiert.').
 
   ENDMETHOD.
 
@@ -156,18 +193,21 @@ CLASS ltc_idm_warehouse IMPLEMENTATION.
         m_cut->update_product_on_warehouse(  ).
 
         SELECT SINGLE produkt
-        FROM zsbt_db_lager
-        INTO @DATA(lv_product)
-        WHERE produkt = @lc_product_2.
+         FROM zsbt_db_lager
+         INTO @DATA(lv_product)
+         WHERE produkt = @lc_product_2.
 
 
         "then
         cl_abap_unit_assert=>assert_equals( EXPORTING act = lv_product
-                                                     exp =  lc_product_2 ).
+                                                      exp =  lc_product_2 ).
       CATCH zcx_sbt_web_shop_exception.
 
     ENDTRY.
   ENDMETHOD.
+
+  "toDo:
+  "Prüfen ob Prudukt geupdatet wird, wenn nicht alle Daten vorhanden sind
 
 ENDCLASS.
 
@@ -203,7 +243,8 @@ CLASS ltc_idm_article DEFINITION FOR TESTING RISK LEVEL HARMLESS.
                lc_article_number_3 TYPE zsbt_artikelnummer_de VALUE '3',
                lc_description_1    TYPE zsbt_beschreibung_de VALUE 'Bildschirm',
                lc_description_2    TYPE zsbt_beschreibung_de VALUE 'Tastatur',
-               lc_currency         TYPE zsbt_waehrung_de VALUE 'Euro'.
+               lc_currency         TYPE zsbt_waehrung_de VALUE 'Euro',
+               mc_text_expception  TYPE string VALUE 'Es wurde eine Exception in der aufgerufnen Methode ausgelöst'.
 
 
 
@@ -232,12 +273,19 @@ CLASS ltc_idm_article IMPLEMENTATION.
   METHOD check_article_exist_true.
     DATA: lv_exist TYPE abap_bool.
     "when
-    lv_exist = m_cut->check_article_exist( iv_article_number = lc_article_number_1 ).
-    "then
-    cl_abap_unit_assert=>assert_true(
-      act = lv_exist
-      msg = 'Die Methode check_article_exist_true gibt abap_false zurück, obwohl der Artikel existiert.'
-    ).
+    TRY.
+        lv_exist = m_cut->check_article_exist( iv_article_number = lc_article_number_1 ).
+        "then
+      CATCH zcx_webshop_exception_new.
+        cl_abap_unit_assert=>fail( msg = mc_text_expception ).
+    ENDTRY.
+    cl_abap_unit_assert=>assert_true( act = lv_exist
+                                      msg = 'Die Methode check_article_exist_true gibt abap_false zurück, obwohl der Artikel existiert.').
+
   ENDMETHOD.
+
+  "Prüfen was passiert wenn kein Artikel vorhanden ist->abap_false
+  "search_free_warehouse_position -> schauen ob im richtig fall eine neue Position gesucht wird, bzw. die alte vorgeschlagen wird und exception handling
+  "search_product_in_wh schauen wenn ein Produkt im Lager existiert ein neuer vorgeschlagen wird, exception handling und neuer falls kein Produkt vorhanden ist
 
 ENDCLASS.

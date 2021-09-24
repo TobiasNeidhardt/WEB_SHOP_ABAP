@@ -52,11 +52,13 @@ CLASS zcl_inbound_delivery_cntrl IMPLEMENTATION.
 
 
   METHOD check_user.
-
-    me->mo_model->continue_if_password_is_equal( iv_warehousenum = iv_warehousenum
-                                                 iv_userid       = iv_userid
-                                                 iv_password     = me->encrypt_password( iv_password = iv_password ) ).
-
+    TRY.
+        me->mo_model->continue_if_password_is_equal( iv_warehousenum = iv_warehousenum
+                                                     iv_userid       = iv_userid
+                                                     iv_password     = me->encrypt_password( iv_password = iv_password ) ).
+      CATCH zcx_webshop_exception_new INTO DATA(e_text).
+        MESSAGE e_text->get_text( ) TYPE 'I' DISPLAY LIKE 'E'.
+    ENDTRY.
   ENDMETHOD.
 
 
@@ -131,26 +133,36 @@ CLASS zcl_inbound_delivery_cntrl IMPLEMENTATION.
 
   METHOD on_scan_quantity.
 
-    me->mo_model->set_quantity_and_meins( EXPORTING iv_quantity = iv_quantity
-                                                    iv_meins    = iv_meins ).
+    TRY.
+        me->mo_model->set_quantity_and_meins( EXPORTING iv_quantity = iv_quantity
+                                                        iv_meins    = iv_meins ).
 
-    me->mo_model->save_and_commit( ).
+        me->mo_model->save_and_commit( ).
 
-    me->mo_log->safe_log( ).
-    me->mo_log->display_log_as_popup( ).
+        me->mo_log->safe_log( ).
+        me->mo_log->display_log_as_popup( ).
 
-    FREE: me->mo_model, me->mo_view, me->mo_log.
+        FREE: me->mo_model, me->mo_view, me->mo_log.
 
-    me->mo_log = NEW zcl_webshop_log( iv_object = me->mc_logobject
-                                           iv_suobj  = me->mc_subobjec ).
+        me->mo_log = NEW zcl_webshop_log( iv_object = me->mc_logobject
+                                               iv_suobj  = me->mc_subobjec ).
 
-    me->mo_model = NEW zcl_inbound_delivery_model( io_log        = me->mo_log
-                                                       io_controller = me ).
+        me->mo_model = NEW zcl_inbound_delivery_model( io_log        = me->mo_log
+                                                           io_controller = me ).
 
 
-    me->mo_view = NEW zcl_inbound_delivery_view( io_controller = me
-                                                     io_log        = me->mo_log ).
-    me->mo_view->call_dynpro_putaway_article( ).
+        me->mo_view = NEW zcl_inbound_delivery_view( io_controller = me
+                                                         io_log        = me->mo_log ).
+        me->mo_view->call_dynpro_putaway_article( ).
+
+        me->mo_log->safe_log( ).
+        me->mo_log->display_log_as_popup( ).
+
+      CATCH zcx_webshop_exception_new INTO DATA(e_text).
+        MESSAGE e_text->get_text( ) TYPE 'I' DISPLAY LIKE 'E'.
+        me->mo_log->safe_log( ).
+        me->mo_log->display_log_as_popup( ).
+    ENDTRY.
 
   ENDMETHOD.
 

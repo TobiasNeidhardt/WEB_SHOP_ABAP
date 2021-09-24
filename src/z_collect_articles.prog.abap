@@ -3,27 +3,25 @@
 *&---------------------------------------------------------------------*
 *&
 *&---------------------------------------------------------------------*
-REPORT Z_COLLECT_ARTICLES.
+REPORT z_collect_articles.
 
-PARAMETERS: p_desig   TYPE zweb_designation  OBLIGATORY,
+PARAMETERS: p_desig TYPE zweb_designation  OBLIGATORY,
             p_descr TYPE zweb_description OBLIGATORY,
-           p_curr TYPE zweb_currency     OBLIGATORY,
-           p_unit  TYPE zweb_unit      OBLIGATORY,
+            p_curr  TYPE zweb_currency     OBLIGATORY,
+            p_unit  TYPE zweb_unit      OBLIGATORY,
             p_price TYPE zweb_price        OBLIGATORY.
 
-DATA: lv_art_nr      TYPE                          i,
-      ls_article        TYPE           zweb_article,
-      lt_article         TYPE TABLE OF  zweb_article,
-      lo_alv            TYPE REF TO    cl_salv_table.
+DATA: lv_art_nr  TYPE                          i,
+      ls_article TYPE           zweb_article,
+      lt_article TYPE TABLE OF  zweb_article,
+      lo_alv     TYPE REF TO    cl_salv_table.
 
 CONSTANTS: lc_range_nr TYPE nrnr VALUE '01'.
-
-"ZSBT_CL_WEBSHOP_CONTANTEN=>GC_range_nr.
 
 CALL FUNCTION 'NUMBER_GET_NEXT'
   EXPORTING
     nr_range_nr = lc_range_nr
-    object      = 'ZWEB_ART' "todo
+    object      = 'ZWEB_ART'
   IMPORTING
     number      = lv_art_nr
   EXCEPTIONS
@@ -47,6 +45,7 @@ ls_article-price         = p_price.
 ls_article-unit       = p_unit.
 
 CALL FUNCTION 'ZWEB_ADD_ARTICLE'
-  EXPORTING is_article = ls_article.
+  EXPORTING
+    is_article = ls_article.
 
 CALL FUNCTION 'ZWEB_SHOW_ARTICLE_LIST'.
