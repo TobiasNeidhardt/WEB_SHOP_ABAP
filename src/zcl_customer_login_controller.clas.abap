@@ -41,11 +41,13 @@ ENDCLASS.
 
 
 
-CLASS zcl_customer_login_controller IMPLEMENTATION.
+CLASS ZCL_CUSTOMER_LOGIN_CONTROLLER IMPLEMENTATION.
+
 
   METHOD constructor.
     me->mo_log = io_log.
   ENDMETHOD.
+
 
   METHOD encrypt_password.
     TRY.
@@ -83,10 +85,12 @@ CLASS zcl_customer_login_controller IMPLEMENTATION.
                                                                             iv_customer_number  = me->mo_customer_login_model->get_customer_number( iv_email = iv_email )
                                                                             iv_email = iv_email
                                                                             io_log = mo_log ).
+
+        me->mo_home_screen_controller->start( ).
       CATCH zcx_webshop_exception_new INTO DATA(e_text).
         MESSAGE e_text->get_text( ) TYPE 'S' DISPLAY LIKE 'E'.
     ENDTRY.
-    me->mo_home_screen_controller->start( ).
+
   ENDMETHOD.
 
 

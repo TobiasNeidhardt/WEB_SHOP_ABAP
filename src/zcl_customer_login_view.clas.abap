@@ -22,17 +22,17 @@ ENDCLASS.
 
 
 
-CLASS zcl_customer_login_view IMPLEMENTATION.
+CLASS ZCL_CUSTOMER_LOGIN_VIEW IMPLEMENTATION.
 
 
   METHOD call_login_screen.
-    TRY.
+*    TRY.
         CALL FUNCTION 'Z_CUSTOMER_LOGIN'
           EXPORTING
             io_customer_login_view = me.
-      CATCH cx_root .
-        RAISE EXCEPTION TYPE zcx_webshop_exception_new.
-    ENDTRY.
+*      CATCH cx_root .
+*        RAISE EXCEPTION TYPE zcx_webshop_exception_new.
+*    ENDTRY.
   ENDMETHOD.
 
 
