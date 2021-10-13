@@ -14,8 +14,8 @@ DURATION SHORT.
           webshop_log                 TYPE REF TO zcl_webshop_log.
     CONSTANTS: lc_logobject          TYPE bal_s_log-object VALUE 'ZWEB',
                lc_subobjec           TYPE bal_s_log-subobject VALUE 'ZWEB',
-               lc_warehouse_number_1 TYPE zsbt_lgnum_de VALUE 'WU01',
-               lc_warehouse_number_2 TYPE zsbt_lgnum_de VALUE 'WU02',
+               lc_warehouse_number_1 TYPE zweb_warehouse_number VALUE 'WU01',
+               lc_warehouse_number_2 TYPE zweb_warehouse_number VALUE 'WU02',
                lc_user_number_1      TYPE char10 VALUE '01',
                lc_user_number_2      TYPE char10 VALUE '02',
                lc_password_1         TYPE string VALUE 'test',
@@ -33,7 +33,7 @@ CLASS ltc_idm_warehouse_employee IMPLEMENTATION.
 
   METHOD class_setup.
 
-    m_environment = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'zsbt_db_lager_ma' ) ) ).
+    m_environment = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'zweb_db_wh_ma' ) ) ).
 
   ENDMETHOD.
 
@@ -119,19 +119,19 @@ CLASS ltc_idm_warehouse DEFINITION FOR TESTING RISK LEVEL HARMLESS.
           l_exception_occured         TYPE abap_bool,
           inbound_delivery_controller TYPE REF TO zcl_inbound_delivery_cntrl,
           webshop_log                 TYPE REF TO zcl_webshop_log.
-    CONSTANTS: lc_logobject          TYPE bal_s_log-object VALUE 'ZSBT',
-               lc_subobjec           TYPE bal_s_log-subobject VALUE 'ZUBT',
-               lc_storage_area_1     TYPE zsbt_lgber_de VALUE 'bereich1',
-               lc_storage_area_2     TYPE zsbt_lgber_de VALUE 'bereich2',
-               lc_storage_place_1    TYPE zsbt_lgplatz_de VALUE 'platz1',
-               lc_storage_place_2    TYPE zsbt_lgplatz_de VALUE 'platz2',
-               lc_warehouse_number_1 TYPE zsbt_lgnum_de VALUE 'wu01',
-               lc_warehouse_number_2 TYPE zsbt_lgnum_de VALUE 'wu02',
-               lc_product_1          TYPE zsbt_artikelnummer_de  VALUE '1234',
-               lc_product_2          TYPE zsbt_artikelnummer_de  VALUE '12345',
-               lc_stock_1            TYPE zsbt_zsbt_menge_de VALUE '10',
-               lc_stock_2            TYPE zsbt_zsbt_menge_de VALUE '20',
-               lc_unit               TYPE zsbt_meins_de VALUE 'ST'.
+    CONSTANTS: lc_logobject          TYPE bal_s_log-object      VALUE 'ZWEB',
+               lc_subobjec           TYPE bal_s_log-subobject   VALUE 'ZWEB',
+               lc_storage_area_1     TYPE zweb_storage_area     VALUE 'bereich1',
+               lc_storage_area_2     TYPE zweb_storage_area     VALUE 'bereich2',
+               lc_storage_place_1    TYPE zweb_storage_place    VALUE 'platz1',
+               lc_storage_place_2    TYPE zweb_storage_place    VALUE 'platz2',
+               lc_warehouse_number_1 TYPE zweb_warehouse_number VALUE 'wu01',
+               lc_warehouse_number_2 TYPE zweb_warehouse_number VALUE 'wu02',
+               lc_product_1          TYPE zweb_article_number   VALUE '1234',
+               lc_product_2          TYPE zweb_article_number   VALUE '12345',
+               lc_stock_1            TYPE zweb_order_amount     VALUE '10',
+               lc_stock_2            TYPE zweb_order_amount     VALUE '20',
+               lc_unit               TYPE zweb_unit             VALUE 'ST'.
 
 
     CLASS-DATA:           m_environment TYPE REF TO if_osql_test_environment.
@@ -144,7 +144,7 @@ ENDCLASS.
 CLASS ltc_idm_warehouse IMPLEMENTATION.
 
   METHOD class_setup.
-    m_environment = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'zweb_db_wh' ) ) ).
+    m_environment = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'ZWEB_DB_WH' ) ) ).
 
   ENDMETHOD.
 
@@ -223,7 +223,7 @@ CLASS ltc_idm_article DEFINITION FOR TESTING RISK LEVEL HARMLESS.
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA: m_cut                       TYPE REF TO zcl_inbound_delivery_model,
-          lt_article_data             TYPE TABLE OF zsbt_artikel,
+          lt_article_data             TYPE TABLE OF zweb_article,
           l_exception_occured         TYPE abap_bool,
           inbound_delivery_controller TYPE REF TO zcl_inbound_delivery_cntrl,
           webshop_log                 TYPE REF TO zcl_webshop_log.
@@ -254,8 +254,8 @@ CLASS ltc_idm_article IMPLEMENTATION.
 
   METHOD setup.
     "given
-    lt_article_data = VALUE #( ( artikelnummer = lc_article_number_1 bezeichnung = lc_description_1 preis = 200 waehrung = lc_currency )
-                               ( artikelnummer = lc_article_number_2 bezeichnung = lc_description_2 preis = 70 waehrung = lc_currency ) ).
+    lt_article_data = VALUE #( ( article_number = lc_article_number_1 description = lc_description_1 price = 200 currency = lc_currency )
+                               ( article_number = lc_article_number_2 description = lc_description_2 price = 70 currency = lc_currency ) ).
 
 
     m_environment->clear_doubles( ).
@@ -267,7 +267,7 @@ CLASS ltc_idm_article IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD class_setup.
-    m_environment = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'zsbt_artikel' ) ) ).
+    m_environment = cl_osql_test_environment=>create( i_dependency_list = VALUE #( ( 'ZWEB_ARTICLE' ) ) ).
   ENDMETHOD.
 
   METHOD check_article_exist_true.
