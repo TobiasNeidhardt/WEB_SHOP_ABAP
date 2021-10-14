@@ -137,7 +137,7 @@ CLASS zcl_inbound_delivery_cntrl IMPLEMENTATION.
         me->mo_model->set_quantity_and_meins( EXPORTING iv_quantity = iv_quantity
                                                         iv_meins    = iv_meins ).
 
-        me->mo_model->save_and_commit( ).
+        me->mo_model->save( ).
 
         me->mo_log->safe_log( ).
         me->mo_log->display_log_as_popup( ).

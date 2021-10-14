@@ -6,18 +6,18 @@
 REPORT Z_COLLECT_CUSTOMER.
 
 PARAMETERS:
-  p_salut TYPE zweb_salutation  OBLIGATORY,
+  p_salut  TYPE zweb_salutation  OBLIGATORY,
   p_name   TYPE zweb_name OBLIGATORY,
-  p_fname TYPE zweb_firstname OBLIGATORY,
+  p_fname  TYPE zweb_firstname OBLIGATORY,
   p_street TYPE zweb_street OBLIGATORY,
-  p_nr   TYPE zweb_house_nr OBLIGATORY,
+  p_nr     TYPE zweb_house_nr OBLIGATORY,
   p_plz    TYPE zweb_postalcode     OBLIGATORY,
-  p_city    TYPE zweb_city     OBLIGATORY,
+  p_city   TYPE zweb_city     OBLIGATORY,
   p_email  TYPE zweb_email   OBLIGATORY,
-  p_phone TYPE zweb_phone_number.
+  p_phone  TYPE zweb_phone_number.
 
 
-DATA: ls_customer     TYPE          zweb_customer,
+DATA: ls_customer   TYPE          zweb_customer,
       lv_nummerint  TYPE          i,
       lv_nummerchar TYPE          zweb_kd_numr_de.
 

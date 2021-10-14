@@ -11,7 +11,8 @@ DURATION SHORT.
           lt_order_data               TYPE TABLE OF zweb_db_wh_ma,
           l_exception_occured         TYPE abap_bool,
           inbound_delivery_controller TYPE REF TO zcl_inbound_delivery_cntrl,
-          webshop_log                 TYPE REF TO zcl_webshop_log.
+          webshop_log                 TYPE REF TO zcl_webshop_log,
+          m_delivery_controller       TYPE REF TO zcl_inbound_delivery_cntrl.
     CONSTANTS: lc_logobject          TYPE bal_s_log-object VALUE 'ZWEB',
                lc_subobjec           TYPE bal_s_log-subobject VALUE 'ZWEB',
                lc_warehouse_number_1 TYPE zweb_warehouse_number VALUE 'WU01',
@@ -43,9 +44,11 @@ CLASS ltc_idm_warehouse_employee IMPLEMENTATION.
                              ( warehouse_number = lc_warehouse_number_2 userid = lc_user_number_2 password = lc_password_2 ) ).
 
     m_environment->clear_doubles( ).
-    webshop_log = NEW zcl_webshop_log( iv_object = lc_logobject iv_suobj = lc_subobjec ).
-    inbound_delivery_controller = NEW zcl_inbound_delivery_cntrl( io_log = webshop_log ).
-    m_cut = NEW zcl_inbound_delivery_model( io_controller = inbound_delivery_controller io_log = webshop_log ).
+    DATA(lo_log) = NEW zcl_webshop_log( iv_object = lc_logobject
+                                        iv_suobj  = lc_subobjec ).
+
+    m_delivery_controller = NEW zcl_inbound_delivery_cntrl( io_log = lo_log ).
+    m_cut = NEW zcl_inbound_delivery_model( io_controller = m_delivery_controller io_log = lo_log ).
 
     m_environment->insert_test_data( EXPORTING i_data = lt_order_data ).
 
@@ -59,7 +62,9 @@ CLASS ltc_idm_warehouse_employee IMPLEMENTATION.
     DATA: lv_password TYPE string VALUE 'falsches_passwort'.
     "when
     TRY.
-        m_cut->check_user_and_password( iv_password = lv_password iv_userid = lc_user_number_1 iv_warehousenum = lc_warehouse_number_1 ).
+        m_cut->check_user_and_password( iv_password = lv_password
+                                        iv_userid = lc_user_number_1
+                                        iv_warehousenum = lc_warehouse_number_1 ).
       CATCH zcx_webshop_exception_new.
         l_exception_occured = abap_true.
     ENDTRY.
@@ -83,7 +88,6 @@ CLASS ltc_idm_warehouse_employee IMPLEMENTATION.
         l_exception_occured = abap_true.
     ENDTRY.
     "then
-
     cl_abap_unit_assert=>assert_true( act = l_exception_occured
                                       msg = 'Der User ist nicht vorhanden es sollte eine Exception geworfen werden.').
 
@@ -100,8 +104,8 @@ CLASS ltc_idm_warehouse_employee IMPLEMENTATION.
         l_exception_occured = abap_true.
     ENDTRY.
     "then
-    cl_abap_unit_assert=>assert_true( act = l_exception_occured
-                                      msg = 'Der User ist nicht vorhanden es sollte eine Exception geworfen werden.').
+    cl_abap_unit_assert=>assert_false( act = l_exception_occured
+                                      msg = 'Passwort und User stimmen überein, es sollte keine Exception geworfen werden').
 
   ENDMETHOD.
 
@@ -115,7 +119,7 @@ CLASS ltc_idm_warehouse DEFINITION FOR TESTING RISK LEVEL HARMLESS.
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA: m_cut                       TYPE REF TO zcl_inbound_delivery_model,
-          lt_order_data               TYPE TABLE OF zsbt_db_lager,
+          lt_order_data               TYPE TABLE OF zweb_db_wh,
           l_exception_occured         TYPE abap_bool,
           inbound_delivery_controller TYPE REF TO zcl_inbound_delivery_cntrl,
           webshop_log                 TYPE REF TO zcl_webshop_log.
@@ -150,8 +154,6 @@ CLASS ltc_idm_warehouse IMPLEMENTATION.
 
   METHOD setup.
     "given
-    lt_order_data = VALUE #( ( lagerbereich = lc_storage_area_1 lagerplatz = lc_storage_place_1 lagernummer = lc_warehouse_number_1  produkt = lc_product_1 bestand = lc_stock_1 mengeneinheit = lc_unit )
-                           ).
 
     m_environment->clear_doubles( ).
     webshop_log = NEW zcl_webshop_log( iv_object = lc_logobject iv_suobj = lc_subobjec ).
@@ -165,9 +167,15 @@ CLASS ltc_idm_warehouse IMPLEMENTATION.
     m_cut->mv_quantity = lc_stock_2.
     m_cut->mv_meins = lc_unit.
 
-    m_environment->insert_test_data( EXPORTING i_data = lt_order_data ).
+    lt_order_data = VALUE #( ( storage_area = lc_storage_area_1
+                               storage_place = lc_storage_place_1
+                               warehouse_number = lc_warehouse_number_1
+                               product = lc_product_1
+                               amount = lc_stock_1
+                               unit = lc_unit ) ).
 
-    l_exception_occured = abap_false.
+
+    m_environment->insert_test_data( EXPORTING i_data = lt_order_data ).
 
   ENDMETHOD.
 
@@ -176,7 +184,7 @@ CLASS ltc_idm_warehouse IMPLEMENTATION.
         "when
         m_cut->update_product_on_warehouse(  ).
 
-      CATCH zcx_sbt_web_shop_exception.
+      CATCH zcx_webshop_exception_new.
         l_exception_occured = abap_true.
     ENDTRY.
     "then
@@ -192,16 +200,16 @@ CLASS ltc_idm_warehouse IMPLEMENTATION.
         "when
         m_cut->update_product_on_warehouse(  ).
 
-        SELECT SINGLE produkt
-         FROM zsbt_db_lager
+        SELECT SINGLE product
+         FROM zweb_db_wh
          INTO @DATA(lv_product)
-         WHERE produkt = @lc_product_2.
-
+         WHERE product = @lc_product_2.
 
         "then
         cl_abap_unit_assert=>assert_equals( EXPORTING act = lv_product
                                                       exp =  lc_product_2 ).
-      CATCH zcx_sbt_web_shop_exception.
+
+      CATCH zcx_webshop_exception_new.
 
     ENDTRY.
   ENDMETHOD.

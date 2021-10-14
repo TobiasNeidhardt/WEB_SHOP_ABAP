@@ -31,7 +31,7 @@ CLASS zcl_inbound_delivery_model DEFINITION
       IMPORTING
         !iv_quantity TYPE zweb_amount
         !iv_meins    TYPE zweb_unit .
-    METHODS save_and_commit RAISING zcx_webshop_exception_new.
+    METHODS save RAISING zcx_webshop_exception_new.
     METHODS set_warehousenumber
       IMPORTING
         !iv_warehouse TYPE zweb_warehouse_number .
@@ -63,7 +63,7 @@ CLASS zcl_inbound_delivery_model DEFINITION
     METHODS search_product_in_wh .
     METHODS save_product_on_storage_place .
     METHODS update_product_on_warehouse
-    RAISING zcx_webshop_exception_new.
+      RAISING zcx_webshop_exception_new.
     METHODS check_article_exist
       IMPORTING
                 !iv_article_number TYPE zweb_product_number
@@ -103,7 +103,7 @@ CLASS zcl_inbound_delivery_model IMPLEMENTATION.
     IF sy-subrc <> 0.
       MESSAGE i070(zsbt_web_shop) INTO DATA(lv_message).
       me->mo_log->add_msg_from_sys(  ).
-      RETURN.
+      RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
 
     IF iv_password <> lv_password.
@@ -133,7 +133,7 @@ CLASS zcl_inbound_delivery_model IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD save_and_commit.
+  METHOD save.
 
     "Falls schon das Produkt vorhanden ist muss die Menge natürlich addiert werden
     SELECT SINGLE FROM zweb_db_wh
@@ -148,7 +148,7 @@ CLASS zcl_inbound_delivery_model IMPLEMENTATION.
       mv_quantity = mv_quantity + ls_quantity_meins-amount.
     ELSEIF sy-subrc = 0 AND me->mv_meins <> ls_quantity_meins-unit.
       "Fehler Mengeneinheit stimmt nicht überein
-      MESSAGE e083(zsbt_web_shop) INTO DATA(lv_message).
+      MESSAGE e083(z_web_shop) INTO DATA(lv_message).
       RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
     ENDIF.
 

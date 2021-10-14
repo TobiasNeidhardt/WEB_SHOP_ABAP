@@ -5,13 +5,13 @@
 *&---------------------------------------------------------------------*
 REPORT z_collect_articles.
 
-PARAMETERS: p_desig TYPE zweb_designation  OBLIGATORY,
+PARAMETERS: p_desig TYPE zweb_designation OBLIGATORY,
             p_descr TYPE zweb_description OBLIGATORY,
-            p_curr  TYPE zweb_currency     OBLIGATORY,
-            p_unit  TYPE zweb_unit      OBLIGATORY,
-            p_price TYPE zweb_price        OBLIGATORY.
+            p_curr  TYPE zweb_currency OBLIGATORY,
+            p_unit  TYPE zweb_unit OBLIGATORY,
+            p_price TYPE zweb_price OBLIGATORY.
 
-DATA: lv_art_nr  TYPE                          i,
+DATA: lv_art_nr  TYPE           i,
       ls_article TYPE           zweb_article,
       lt_article TYPE TABLE OF  zweb_article,
       lo_alv     TYPE REF TO    cl_salv_table.
