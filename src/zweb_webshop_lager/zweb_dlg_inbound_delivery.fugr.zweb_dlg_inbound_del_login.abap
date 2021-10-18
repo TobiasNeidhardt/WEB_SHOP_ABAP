@@ -1,4 +1,4 @@
-FUNCTION ZWEB_INBOUND_DELIVERY_LOGIN.
+FUNCTION ZWEB_DLG_INBOUND_DEL_LOGIN .
 *"----------------------------------------------------------------------
 *"*"Lokale Schnittstelle:
 *"  IMPORTING
