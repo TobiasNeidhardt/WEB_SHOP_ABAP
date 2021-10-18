@@ -45,89 +45,9 @@ AT SELECTION-SCREEN.
 
   CASE sy-ucomm.
     WHEN 'add_to_cart'.
-      CLEAR ls_order.
-
-      ls_order-unit = p_bmeins.
-      ls_order-status = lc_status_cart.
-      ls_order-article = p_artnum.
-      ls_order-order_amount = p_amount.
-      ls_order-customer_number = p_kundid.
-
-
-      INSERT ls_order INTO TABLE lt_cart.
-      IF sy-subrc EQ 0.
-
-        MESSAGE i014(z_web_shop) WITH p_artnum.
-
-      ELSE.
-
-        MESSAGE e012(z_web_shop).
-      ENDIF.
 
     WHEN 'order'.
-      IF lt_cart IS INITIAL.
-        MESSAGE e011(z_web_shop).
-      ELSE.
-        CALL FUNCTION 'NUMBER_GET_NEXT'
-          EXPORTING
-            nr_range_nr = lc_range_nr
-            object      = 'ZWEB_ORDER'
-          IMPORTING
-            number      = lv_bnumber_int
-          EXCEPTIONS
-            OTHERS      = 1.
 
-        IF sy-subrc <> 0.
-          MESSAGE e013(z_web_shop).
-        ENDIF.
-        lv_bnumber_chr = lv_bnumber_int.
-        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
-          EXPORTING
-            input  = lv_bnumber_chr
-          IMPORTING
-            output = lv_bnumber_chr.
-
-
-        LOOP AT lt_cart ASSIGNING <fs_cart>.
-          <fs_cart>-position_number = sy-tabix.
-
-          <fs_cart>-order_number = lv_bnumber_chr.
-          <fs_cart>-status = lc_status_ordered.
-        ENDLOOP.
-
-        INSERT zweb_order FROM TABLE lt_cart.
-        IF sy-subrc <> 0.
-          MESSAGE e009(z_web_shop).
-        ELSE.
-          MESSAGE i010(z_web_shop).
-        ENDIF.
-
-        COMMIT WORK.
-
-        CLEAR:  lt_cart.
-      ENDIF.
     WHEN 'show'.
-      cl_salv_table=>factory(
-      IMPORTING
-        r_salv_table   = lo_alv
-      CHANGING
-        t_table        = lt_cart ).
-
-      DATA(lo_functions) = lo_alv->get_functions( ).
-      lo_functions->set_all( abap_false ).
-      lo_columns = lo_alv->get_columns( ).
-      lo_columns->set_optimize( abap_true ).
-
-      TRY.
-          lo_column  = lo_columns->get_column( columnname = 'MANDT'  ).
-          lo_column->set_visible( abap_false ).
-          lo_column  = lo_columns->get_column( columnname = 'BESTELLNUMMER'  ).
-          lo_column->set_visible( abap_false ).
-          lo_column  = lo_columns->get_column( columnname = 'POSITIONSNUMMER'  ).
-          lo_column->set_visible( abap_false ).
-
-        CATCH cx_salv_not_found.
-      ENDTRY.
-      lo_alv->display( ).
 
   ENDCASE.

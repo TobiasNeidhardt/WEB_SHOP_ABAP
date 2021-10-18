@@ -115,30 +115,10 @@ ENDCLASS.
 
 
 
-CLASS zcl_homescreen_model IMPLEMENTATION.
+CLASS ZCL_HOMESCREEN_MODEL IMPLEMENTATION.
 
 
   METHOD add_to_cart.
-
-    DATA: lc_status_in_cart TYPE char15 VALUE 'Im Warenkorb'.
-
-    DATA(ls_cart) = VALUE zweb_s_cart( article_number      = is_article-article_number
-                                       article_designation = is_article-designation
-                                       article_description = is_article-description
-                                       unit                = is_article-unit
-                                       currency            = is_article-currency
-                                       number_of_articles  = iv_number_of_articles
-                                       price_per_article   = is_article-price
-                                       price               = is_article-price * iv_number_of_articles
-                                       status              = lc_status_in_cart ).
-
-    APPEND ls_cart TO me->mt_cart.
-    IF sy-subrc <> 0.
-      MESSAGE i087(z_web_shop) INTO DATA(ls_msg).
-      me->mo_log->add_msg_from_sys( ).
-      me->mo_log->safe_log( ).
-      RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-    ENDIF.
 
   ENDMETHOD.
 
@@ -175,15 +155,6 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
   METHOD check_if_order_exist.
 
-    DATA: lt_order_to_show TYPE zweb_tt_order.
-    lt_order_to_show = me->mo_home_screen_controller->mt_order_to_show.
-    SELECT SINGLE @abap_true
-        FROM @lt_order_to_show AS orders
-        WHERE orders~order_number = @is_selected_row-order_number
-        INTO @DATA(lv_exists).
-
-    rv_exist = lv_exists.
-
   ENDMETHOD.
 
 
@@ -199,42 +170,10 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
   METHOD delete_position.
 
-    IF is_position-status = mc_status_in_progress OR is_position-status = mc_status_completed.
-      MESSAGE i061(z_web_shop) INTO DATA(ls_msg).
-      me->mo_log->add_msg_from_sys( ).
-      me->mo_log->safe_log( ).
-      RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-    ELSE.
-      DELETE me->mo_home_screen_controller->mt_order_to_show WHERE order_number   = is_position-order_number
-                                                               AND position_number = is_position-position_number.
-      DELETE zweb_order FROM is_position.
-      IF sy-subrc <> 0.
-        MESSAGE i060(z_web_shop) INTO ls_msg.
-        me->mo_log->add_msg_from_sys( ).
-        me->mo_log->safe_log( ).
-        RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-      ENDIF.
-    ENDIF.
-
-
   ENDMETHOD.
 
 
   METHOD edit_quantity_of_position.
-
-    DATA(ls_position_to_update) = VALUE zweb_order( BASE is_position order_amount = iv_quantity ).
-
-    UPDATE zweb_order FROM @ls_position_to_update.
-
-    IF sy-subrc <> 0.
-      ROLLBACK WORK.
-      MESSAGE i068(z_web_shop) INTO DATA(lv_msg).
-      me->mo_log->add_msg_from_sys( ).
-      me->mo_log->safe_log( ).
-      RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-    ENDIF.
-
-*    COMMIT WORK.
 
   ENDMETHOD.
 
@@ -251,47 +190,16 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
   METHOD get_address_of_customer.
 
-    SELECT SINGLE street house_number zip_code city
-      FROM zweb_customer
-      INTO ms_order_address
-      WHERE customer_number = mv_customernumber.
-
-    IF sy-subrc <> 0.
-      MESSAGE i059(z_web_shop) INTO DATA(ls_msg).
-      me->mo_log->add_msg_from_sys( ).
-      me->mo_log->safe_log( ).
-      RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-    ENDIF.
 
   ENDMETHOD.
 
 
   METHOD get_all_orders_from_customer.
 
-    CLEAR me->mt_order.
-
-    SELECT *
-      FROM zweb_order
-      INTO TABLE me->mt_order
-      WHERE customer_number = mv_customernumber.
-    IF sy-subrc <> 0.
-      MESSAGE i086(z_web_shop) INTO DATA(ls_msg).
-      me->mo_log->add_msg_from_sys( ).
-      me->mo_log->safe_log( ).
-      RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-    ENDIF.
-
   ENDMETHOD.
 
 
   METHOD get_done_order_from_mt_order.
-    SORT me->mt_order BY order_number.
-
-    LOOP AT me->mt_order ASSIGNING FIELD-SYMBOL(<ls_order>) WHERE status = mc_status_completed OR status = mc_status_inactive.
-      APPEND <ls_order> TO rt_done_order.
-    ENDLOOP.
-
-    DELETE ADJACENT DUPLICATES FROM rt_done_order.
 
   ENDMETHOD.
 
@@ -304,14 +212,6 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
 
   METHOD get_open_order_from_mt_order.
-
-    SORT me->mt_order BY order_number.
-
-    LOOP AT me->mt_order ASSIGNING FIELD-SYMBOL(<ls_order>) WHERE status = mc_status_ordered OR status = mc_status_in_progress.
-      APPEND <ls_order> TO rt_openorder.
-    ENDLOOP.
-
-    DELETE ADJACENT DUPLICATES FROM rt_openorder COMPARING order_number.
 
   ENDMETHOD.
 
@@ -357,14 +257,6 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
   METHOD insert_address_of_order.
 
-    DATA(ls_order_adress_to_insert) = VALUE zweb_order_ad(  order_number = iv_order_number
-                                                       street       = me->ms_order_address-street
-                                                       house_number = me->ms_order_address-houese_number
-                                                       zip_code     = me->ms_order_address-zip_code
-                                                       city         = me->ms_order_address-city ).
-
-    INSERT zweb_order_ad FROM ls_order_adress_to_insert.
-
   ENDMETHOD.
 
 
@@ -393,8 +285,6 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
 
   METHOD remove_item_from_cart.
-
-    DELETE mt_cart WHERE article_number = iv_article_number.
 
   ENDMETHOD.
 
@@ -432,10 +322,6 @@ CLASS zcl_homescreen_model IMPLEMENTATION.
 
 
   METHOD select_articles.
-
-    SELECT *
-      FROM zweb_article
-      INTO TABLE @mt_articles.
 
   ENDMETHOD.
 

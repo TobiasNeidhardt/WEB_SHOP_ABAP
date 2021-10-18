@@ -58,82 +58,6 @@ CLASS ZCL_ORDER_OVERVIEW_MODEL IMPLEMENTATION.
 
     METHOD add_to_view.
 
-      cs_view = VALUE #( order_number = is_order-order_number
-                         order_value  = iv_total_price
-                         currency     = '€'
-                         status       = is_order-status
-                         customer_number = is_order-customer_number ).
-
-    ENDMETHOD.
-
-
-    METHOD constructor.
-
-      me->mo_log = io_log.
-
-    ENDMETHOD.
-
-
-    METHOD delete_order.
-
-      DELETE FROM zweb_order WHERE order_number = iv_order_number.
-      IF sy-subrc <> 0.
-        MESSAGE i033(z_web_shop) INTO DATA(ls_msg).
-        me->mo_log->add_msg_from_sys( ).
-        me->mo_log->safe_log( ).
-        RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-      ENDIF.
-
-    ENDMETHOD.
-
-
-    METHOD delete_position.
-
-      DELETE FROM zweb_order WHERE order_number = is_position-order_number AND position_number = is_position-position_number.
-      IF sy-subrc <> 0.
-        MESSAGE i035(z_web_shop) INTO DATA(ls_msg).
-        me->mo_log->add_msg_from_sys( ).
-        me->mo_log->safe_log( ).
-        RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-      ENDIF.
-
-    ENDMETHOD.
-
-
-    METHOD edit_postition.
-
-      DATA(ls_position) = is_position.
-      FIELD-SYMBOLS <ls_position> TYPE zweb_order.
-
-      ASSIGN ls_position TO <ls_position>.
-      me->change_structur_from_value( EXPORTING iv_wert = iv_wert CHANGING cs_position = <ls_position> ).
-      UPDATE zweb_order FROM ls_position.
-
-      IF sy-subrc NE 0.
-        ROLLBACK WORK.
-        MESSAGE i035(z_web_shop) INTO DATA(lv_msg).
-        me->mo_log->add_msg_from_sys( ).
-        me->mo_log->safe_log( ).
-        RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-      ELSE.
-        COMMIT WORK AND WAIT.
-      ENDIF.
-
-    ENDMETHOD.
-
-
-    METHOD get_article_price_table.
-
-      SELECT article_number , price
-        FROM zweb_article
-        INTO TABLE @rt_artikel_preis.
-      IF sy-subrc <> 0.
-        MESSAGE e081(z_web_shop) INTO DATA(lv_msg).
-        " me->mo_log->add_msg_from_sys( ).
-        " me->mo_log->safe_log( ).
-        RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-      ENDIF.
-
     ENDMETHOD.
 
 
@@ -155,6 +79,35 @@ CLASS ZCL_ORDER_OVERVIEW_MODEL IMPLEMENTATION.
           me->mo_log->safe_log( ).
           RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
       ENDTRY.
+
+    ENDMETHOD.
+
+
+    METHOD constructor.
+
+      me->mo_log = io_log.
+
+    ENDMETHOD.
+
+
+    METHOD delete_order.
+
+    ENDMETHOD.
+
+
+    METHOD delete_position.
+
+    ENDMETHOD.
+
+
+    METHOD edit_postition.
+
+
+    ENDMETHOD.
+
+
+    METHOD get_article_price_table.
+
 
     ENDMETHOD.
 
@@ -238,13 +191,6 @@ CLASS ZCL_ORDER_OVERVIEW_MODEL IMPLEMENTATION.
 
     METHOD get_positions.
 
-      CLEAR me->mt_positions.
-
-      SELECT *
-        FROM zweb_order
-        INTO TABLE mt_positions
-        WHERE order_number = iv_order_number.
-
     ENDMETHOD.
 
 
@@ -263,67 +209,6 @@ CLASS ZCL_ORDER_OVERVIEW_MODEL IMPLEMENTATION.
 
 
     METHOD select_with_condition.
-
-      CASE iv_condition_description.
-        WHEN lc_no_filter.
-          SELECT *
-             FROM zweb_order
-             INTO TABLE me->mt_orders.
-        WHEN lc_customer_number.
-          SELECT *
-            FROM zweb_order
-            INTO TABLE me->mt_orders
-            WHERE customer_number = iv_condition.
-
-          IF sy-subrc = 4.
-            MESSAGE i018(z_web_shop) INTO DATA(lv_message).
-            me->mo_log->add_msg_from_sys( ).
-            me->mo_log->safe_log( ).
-            RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-          ELSEIF sy-subrc <> 0.
-            MESSAGE e016(z_web_shop) INTO lv_message.
-            me->mo_log->add_msg_from_sys( ).
-            me->mo_log->safe_log( ).
-            RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-          ELSEIF me->mt_orders IS INITIAL.
-            MESSAGE e025(z_web_shop) INTO lv_message.
-            me->mo_log->add_msg_from_sys( ).
-            me->mo_log->safe_log( ).
-            RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-          ENDIF.
-
-        WHEN lc_order_number.
-          SELECT *
-            FROM zweb_order
-            INTO TABLE me->mt_orders
-            WHERE order_number = iv_condition.
-          IF sy-subrc = 4.
-            MESSAGE i084(z_web_shop) INTO lv_message.
-            me->mo_log->add_msg_from_sys( ).
-            me->mo_log->safe_log( ).
-            RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-          ELSEIF sy-subrc <> 0.
-            MESSAGE e015(z_web_shop) INTO lv_message.
-            RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-          ENDIF.
-
-        WHEN lc_status.
-          SELECT *
-            FROM zweb_order
-            INTO TABLE me->mt_orders
-            WHERE status = iv_condition.
-          IF sy-subrc = 4.
-            MESSAGE i085(z_web_shop) INTO lv_message.
-            me->mo_log->add_msg_from_sys( ).
-            me->mo_log->safe_log( ).
-            RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-          ELSEIF sy-subrc <>  0.
-            MESSAGE e017(z_web_shop) INTO lv_message.
-            me->mo_log->add_msg_from_sys( ).
-            me->mo_log->safe_log( ).
-            RAISE EXCEPTION TYPE zcx_webshop_exception_new USING MESSAGE.
-          ENDIF.
-      ENDCASE.
 
     ENDMETHOD.
 ENDCLASS.
